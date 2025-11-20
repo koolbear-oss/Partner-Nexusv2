@@ -9,14 +9,23 @@ import { Search, Briefcase, Calendar, DollarSign, Building2, Sparkles } from 'lu
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { format } from 'date-fns';
+import { useCurrentUser } from '../components/hooks/useCurrentUser';
 
 export default function Projects() {
+  const { isAdmin, partnerId } = useCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects'],
-    queryFn: () => base44.entities.Project.list('-created_date'),
+    queryKey: ['projects', partnerId],
+    queryFn: async () => {
+      const allProjects = await base44.entities.Project.list('-created_date');
+      if (isAdmin) return allProjects;
+      return allProjects.filter(p => 
+        p.assigned_partner_id === partnerId || 
+        p.ai_matched_partners?.some(m => m.partner_id === partnerId)
+      );
+    },
   });
 
   const { data: partners = [] } = useQuery({
@@ -65,7 +74,12 @@ export default function Projects() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Project Portfolio</h1>
-        <p className="text-slate-600 mt-2">Track and orchestrate {projects.length} projects across your partner network</p>
+        <p className="text-slate-600 mt-2">
+          {isAdmin 
+            ? `Track and orchestrate ${projects.length} projects across your partner network`
+            : `Your assigned and matched projects (${projects.length})`
+          }
+        </p>
       </div>
 
       {/* Filters */}
@@ -112,17 +126,29 @@ export default function Projects() {
                       <Briefcase className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h3 className="text-lg font-bold text-slate-900">{project.project_name}</h3>
-                          <Badge className={`${statusColors[project.status]} border font-medium px-2 py-1 text-xs`}>
-                            {project.status.replace(/_/g, ' ')}
-                          </Badge>
-                          {(project.status === 'tender_stage' || project.status === 'partner_matching') && 
-                           project.ai_matched_partners?.length > 0 && (
-                            <Badge variant="outline" className="border-purple-300 text-purple-700 flex items-center gap-1 px-2 py-1 text-xs">
-                              <Sparkles className="w-3 h-3" />
-                              AI Matched
-                            </Badge>
-                          )}
+                         <h3 className="text-lg font-bold text-slate-900">{project.project_name}</h3>
+                         <Badge className={`${statusColors[project.status]} border font-medium px-2 py-1 text-xs`}>
+                           {project.status.replace(/_/g, ' ')}
+                         </Badge>
+                         {!isAdmin && project.assigned_partner_id === partnerId && (
+                           <Badge className="bg-blue-600 text-white px-2 py-1 text-xs">
+                             Your Project
+                           </Badge>
+                         )}
+                         {!isAdmin && project.assigned_partner_id !== partnerId && 
+                          project.ai_matched_partners?.some(m => m.partner_id === partnerId) && (
+                           <Badge variant="outline" className="border-purple-300 text-purple-700 flex items-center gap-1 px-2 py-1 text-xs">
+                             <Sparkles className="w-3 h-3" />
+                             Potential Match
+                           </Badge>
+                         )}
+                         {isAdmin && (project.status === 'tender_stage' || project.status === 'partner_matching') && 
+                          project.ai_matched_partners?.length > 0 && (
+                           <Badge variant="outline" className="border-purple-300 text-purple-700 flex items-center gap-1 px-2 py-1 text-xs">
+                             <Sparkles className="w-3 h-3" />
+                             AI Matched
+                           </Badge>
+                         )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
                           <Building2 className="w-4 h-4" />

@@ -9,16 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Plus, AlertCircle, CheckCircle2, Clock, Award } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
 import AddCertificationDialog from '../components/certifications/AddCertificationDialog';
+import { useCurrentUser } from '../components/hooks/useCurrentUser';
 
 export default function Certifications() {
+  const { isAdmin, partnerId } = useCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: certifications = [], isLoading } = useQuery({
-    queryKey: ['certifications'],
-    queryFn: () => base44.entities.Certification.list('-expiry_date'),
+    queryKey: ['certifications', partnerId],
+    queryFn: async () => {
+      const allCerts = await base44.entities.Certification.list('-expiry_date');
+      return isAdmin ? allCerts : allCerts.filter(c => c.partner_id === partnerId);
+    },
   });
 
   const { data: partners = [] } = useQuery({
@@ -77,7 +82,9 @@ export default function Certifications() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Certification Management</h1>
-          <p className="text-slate-600 mt-2">Automated tracking and compliance monitoring</p>
+          <p className="text-slate-600 mt-2">
+            {isAdmin ? 'Network-wide tracking and compliance' : 'Your organization\'s certifications'}
+          </p>
         </div>
         <Button onClick={() => setShowAddDialog(true)} className="bg-blue-900 hover:bg-blue-800">
           <Plus className="w-4 h-4 mr-2" />

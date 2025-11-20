@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 export default function AddCertificationDialog({ open, onClose, partners, solutions }) {
+  const { isAdmin, partnerId } = useCurrentUser();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
-    partner_id: '',
+    partner_id: partnerId || '',
     solution_id: '',
     certification_name: '',
     certification_code: '',
@@ -43,12 +45,16 @@ export default function AddCertificationDialog({ open, onClose, partners, soluti
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Partner *</Label>
-                <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
+                <Select 
+                  value={formData.partner_id} 
+                  onValueChange={(value) => setFormData({ ...formData, partner_id: value })}
+                  disabled={!isAdmin}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select partner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {partners.map(partner => (
+                    {partners.filter(p => isAdmin || p.id === partnerId).map(partner => (
                       <SelectItem key={partner.id} value={partner.id}>{partner.company_name}</SelectItem>
                     ))}
                   </SelectContent>

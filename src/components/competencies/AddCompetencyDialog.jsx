@@ -5,11 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 export default function AddCompetencyDialog({ open, onClose, partners, solutions, verticals }) {
+  const { isAdmin, partnerId } = useCurrentUser();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
-    partner_id: '',
+    partner_id: partnerId || '',
     solution_id: '',
     vertical_id: '',
     phase: '',
@@ -39,12 +41,16 @@ export default function AddCompetencyDialog({ open, onClose, partners, solutions
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Partner *</Label>
-              <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
+              <Select 
+                value={formData.partner_id} 
+                onValueChange={(value) => setFormData({ ...formData, partner_id: value })}
+                disabled={!isAdmin}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select partner" />
                 </SelectTrigger>
                 <SelectContent>
-                  {partners.filter(p => p.status === 'active').map(partner => (
+                  {partners.filter(p => (isAdmin || p.id === partnerId) && p.status === 'active').map(partner => (
                     <SelectItem key={partner.id} value={partner.id}>{partner.company_name}</SelectItem>
                   ))}
                 </SelectContent>

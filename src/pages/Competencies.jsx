@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Plus, Award, TrendingUp, CheckCircle2 } from 'lucide-react';
 import AddCompetencyDialog from '../components/competencies/AddCompetencyDialog';
+import { useCurrentUser } from '../components/hooks/useCurrentUser';
 
 export default function Competencies() {
+  const { isAdmin, partnerId } = useCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPartner, setFilterPartner] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
@@ -17,8 +19,11 @@ export default function Competencies() {
   const queryClient = useQueryClient();
 
   const { data: competencies = [], isLoading } = useQuery({
-    queryKey: ['competencies'],
-    queryFn: () => base44.entities.Competency.list('-created_date'),
+    queryKey: ['competencies', partnerId],
+    queryFn: async () => {
+      const allComps = await base44.entities.Competency.list('-created_date');
+      return isAdmin ? allComps : allComps.filter(c => c.partner_id === partnerId);
+    },
   });
 
   const { data: partners = [] } = useQuery({
@@ -80,7 +85,9 @@ export default function Competencies() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Competency Matrix</h1>
-          <p className="text-slate-600 mt-2">Multi-dimensional tracking of partner capabilities</p>
+          <p className="text-slate-600 mt-2">
+            {isAdmin ? 'Multi-dimensional tracking of partner capabilities' : 'Your organization\'s competencies'}
+          </p>
         </div>
         <Button onClick={() => setShowAddDialog(true)} className="bg-blue-900 hover:bg-blue-800">
           <Plus className="w-4 h-4 mr-2" />
@@ -139,7 +146,7 @@ export default function Competencies() {
       {/* Filters */}
       <Card className="shadow-sm">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
@@ -149,17 +156,19 @@ export default function Competencies() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterPartner} onValueChange={setFilterPartner}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Partners" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Partners</SelectItem>
-                {partners.filter(p => p.status === 'active').map(partner => (
-                  <SelectItem key={partner.id} value={partner.id}>{partner.company_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isAdmin && (
+              <Select value={filterPartner} onValueChange={setFilterPartner}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Partners" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Partners</SelectItem>
+                  {partners.filter(p => p.status === 'active').map(partner => (
+                    <SelectItem key={partner.id} value={partner.id}>{partner.company_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={filterLevel} onValueChange={setFilterLevel}>
               <SelectTrigger>
                 <SelectValue placeholder="All Levels" />
@@ -215,7 +224,7 @@ export default function Competencies() {
                   </div>
                 </div>
               </div>
-              {!comp.verified && (
+              {!comp.verified && isAdmin && (
                 <Button
                   onClick={() => verifyMutation.mutate({ id: comp.id, verified: true })}
                   size="sm"
