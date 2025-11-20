@@ -18,26 +18,29 @@ import {
   LogOut
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useCurrentUser } from './components/hooks/useCurrentUser';
+import PartnerSelector from './components/admin/PartnerSelector';
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = React.useState(null);
+  const [mimicPartnerId, setMimicPartnerId] = useState(null);
+  const { user, isAdmin } = useCurrentUser();
 
-  React.useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
-
-  const navigation = [
-    { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-    { name: 'Partners', icon: Users, page: 'Partners' },
-    { name: 'Projects', icon: Briefcase, page: 'Projects' },
-    { name: 'Competencies', icon: Award, page: 'Competencies' },
-    { name: 'Certifications', icon: GraduationCap, page: 'Certifications' },
-    { name: 'Pricing', icon: DollarSign, page: 'Pricing' },
-    { name: 'Bonuses', icon: DollarSign, page: 'Bonuses' },
-    { name: 'Analytics', icon: BarChart3, page: 'Analytics' },
-    { name: 'Marketplace', icon: Store, page: 'Marketplace' },
+  const navigationItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', roles: ['admin', 'partner_user'] },
+    { name: 'Partners', icon: Users, page: 'Partners', roles: ['admin'] },
+    { name: 'Projects', icon: Briefcase, page: 'Projects', roles: ['admin', 'partner_user'] },
+    { name: 'Competencies', icon: Award, page: 'Competencies', roles: ['admin', 'partner_user'] },
+    { name: 'Certifications', icon: GraduationCap, page: 'Certifications', roles: ['admin', 'partner_user'] },
+    { name: 'Pricing', icon: DollarSign, page: 'Pricing', roles: ['admin'] },
+    { name: 'Bonuses', icon: DollarSign, page: 'Bonuses', roles: ['admin'] },
+    { name: 'Analytics', icon: BarChart3, page: 'Analytics', roles: ['admin'] },
+    { name: 'Marketplace', icon: Store, page: 'Marketplace', roles: ['admin'] },
   ];
+
+  const navigation = navigationItems.filter(item => 
+    user?.role && item.roles.includes(user.role)
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -110,6 +113,12 @@ export default function Layout({ children, currentPageName }) {
               </button>
 
               <div className="flex items-center gap-4">
+                {isAdmin && (
+                  <PartnerSelector 
+                    value={mimicPartnerId} 
+                    onChange={setMimicPartnerId}
+                  />
+                )}
                 <button className="relative text-slate-600 hover:text-slate-900">
                   <Bell className="w-5 h-5" />
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
