@@ -23,6 +23,7 @@ export default function CreateProject() {
     description: '',
     primary_solution: '',
     additional_solutions: [],
+    product_groups: [],
     vertical_id: '',
     estimated_value: '',
     project_type: 'new_installation',
@@ -50,6 +51,29 @@ export default function CreateProject() {
     queryKey: ['verticals'],
     queryFn: () => base44.entities.Vertical.list(),
   });
+
+  const { data: currentPartner } = useQuery({
+    queryKey: ['partner', partnerId],
+    queryFn: async () => {
+      const partners = await base44.entities.Partner.list();
+      return partners.find(p => p.id === partnerId);
+    },
+    enabled: !!partnerId,
+  });
+
+  const { data: productGroups = [] } = useQuery({
+    queryKey: ['productGroups'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'product_group' && v.active);
+    },
+  });
+
+  // Filter product groups based on partner's allowed groups
+  const allowedProductGroups = productGroups.filter(pg => 
+    !currentPartner?.product_groups || currentPartner.product_groups.length === 0 || 
+    currentPartner.product_groups.includes(pg.value)
+  );
 
   const createProjectMutation = useMutation({
     mutationFn: async (projectData) => {
@@ -208,6 +232,33 @@ export default function CreateProject() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Expected ASSA ABLOY Product Groups *</Label>
+              <p className="text-xs text-slate-500 mb-2">Select the product groups you plan to propose for this project</p>
+              <div className="flex flex-wrap gap-2 p-3 border rounded-lg min-h-[60px]">
+                {allowedProductGroups.length > 0 ? (
+                  allowedProductGroups.map(pg => (
+                    <label key={pg.id} className="flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={formData.product_groups?.includes(pg.value)}
+                        onChange={(e) => {
+                          const current = formData.product_groups || [];
+                          const updated = e.target.checked
+                            ? [...current, pg.value]
+                            : current.filter(v => v !== pg.value);
+                          updateField('product_groups', updated);
+                        }}
+                      />
+                      <span className="text-sm">{pg.label}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 italic">No product groups available for your partner profile</p>
+                )}
               </div>
             </div>
           </CardContent>

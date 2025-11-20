@@ -32,6 +32,18 @@ import CreateProject from "./CreateProject";
 
 import CreatePartner from "./CreatePartner";
 
+import EditPartner from "./EditPartner";
+
+import DropdownManager from "./DropdownManager";
+
+import CreateTender from "./CreateTender";
+
+import ProductGroupDiscountManager from "./ProductGroupDiscountManager";
+
+import ProjectExtraDiscountManager from "./ProjectExtraDiscountManager";
+
+import TierSettings from "./TierSettings";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -67,6 +79,18 @@ const PAGES = {
     CreateProject: CreateProject,
     
     CreatePartner: CreatePartner,
+    
+    EditPartner: EditPartner,
+    
+    DropdownManager: DropdownManager,
+    
+    CreateTender: CreateTender,
+    
+    ProductGroupDiscountManager: ProductGroupDiscountManager,
+    
+    ProjectExtraDiscountManager: ProjectExtraDiscountManager,
+    
+    TierSettings: TierSettings,
     
 }
 
@@ -126,6 +150,18 @@ function PagesContent() {
                 <Route path="/CreateProject" element={<CreateProject />} />
                 
                 <Route path="/CreatePartner" element={<CreatePartner />} />
+                
+                <Route path="/EditPartner" element={<EditPartner />} />
+                
+                <Route path="/DropdownManager" element={<DropdownManager />} />
+                
+                <Route path="/CreateTender" element={<CreateTender />} />
+                
+                <Route path="/ProductGroupDiscountManager" element={<ProductGroupDiscountManager />} />
+                
+                <Route path="/ProjectExtraDiscountManager" element={<ProjectExtraDiscountManager />} />
+                
+                <Route path="/TierSettings" element={<TierSettings />} />
                 
             </Routes>
         </Layout>

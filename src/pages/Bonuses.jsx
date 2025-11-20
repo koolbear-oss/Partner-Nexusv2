@@ -85,10 +85,13 @@ export default function Bonuses() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-          {isAdmin ? 'Bonus Management' : 'Your Bonuses'}
+          {isAdmin ? 'Bonus Management' : 'Your Performance Rewards'}
         </h1>
         <p className="text-slate-600 mt-2">
-          {isAdmin ? 'Track and manage partner bonuses across all periods' : 'View your bonus history and payment status'}
+          {isAdmin 
+            ? `Review and approve quarterly bonus calculations for ${bonuses.length} partners` 
+            : `Track your earned bonuses and performance incentives from ASSA ABLOY`
+          }
         </p>
       </div>
 

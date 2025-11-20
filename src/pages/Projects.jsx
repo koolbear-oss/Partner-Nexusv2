@@ -57,8 +57,8 @@ export default function Projects() {
   };
 
   const getVerticalName = (verticalId) => {
-    const vertical = verticals.find(v => v.code === verticalId);
-    return vertical?.name || verticalId;
+    const vertical = verticals.find(v => v.id === verticalId || v.code === verticalId);
+    return vertical?.name || 'Unknown';
   };
 
   const statusColors = {
@@ -79,7 +79,7 @@ export default function Projects() {
           <p className="text-slate-600 mt-2">
             {isAdmin 
               ? `Track and orchestrate ${projects.length} projects across your partner network`
-              : `Your assigned and matched projects (${projects.length})`
+              : `Your projects with ASSA ABLOY (${projects.length})`
             }
           </p>
         </div>
@@ -168,10 +168,10 @@ export default function Projects() {
                           <span>{getVerticalName(project.vertical_id)}</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {project.solution_ids?.slice(0, 3).map(solutionCode => {
-                            const solution = solutions.find(s => s.code === solutionCode);
+                          {project.solution_ids?.slice(0, 3).map(solutionId => {
+                            const solution = solutions.find(s => s.id === solutionId || s.code === solutionId);
                             return solution ? (
-                              <Badge key={solutionCode} variant="outline" className="text-xs bg-slate-50">
+                              <Badge key={solutionId} variant="outline" className="text-xs bg-slate-50">
                                 {solution.name}
                               </Badge>
                             ) : null;

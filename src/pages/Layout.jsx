@@ -20,11 +20,13 @@ import {
 import { base44 } from '@/api/base44Client';
 import { useCurrentUser } from './components/hooks/useCurrentUser';
 import PartnerSelector from './components/admin/PartnerSelector';
+import { MimicProvider, useMimic } from './components/contexts/MimicContext';
 
-export default function Layout({ children, currentPageName }) {
+function LayoutContent({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mimicPartnerId, setMimicPartnerId] = useState(null);
-  const { user, isAdmin } = useCurrentUser();
+  const { mimicPartnerId, setMimicPartnerId } = useMimic();
+  const { user, originalUser, isAdmin } = useCurrentUser();
+  const isOriginalAdmin = originalUser?.role === 'admin'; // Original role, not affected by mimic
 
   const navigationItems = [
     { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', roles: ['admin', 'partner_user'] },
@@ -37,9 +39,13 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Achievements', icon: Award, page: 'Achievements', roles: ['admin', 'partner_user'] },
     { name: 'Bonuses', icon: DollarSign, page: 'Bonuses', roles: ['admin', 'partner_user'] },
     { name: 'Pricing', icon: DollarSign, page: 'Pricing', roles: ['admin'] },
+    { name: 'Product Discounts', icon: DollarSign, page: 'ProductGroupDiscountManager', roles: ['admin'] },
+    { name: 'Extra Discounts', icon: DollarSign, page: 'ProjectExtraDiscountManager', roles: ['admin'] },
     { name: 'Analytics', icon: BarChart3, page: 'Analytics', roles: ['admin'] },
-    { name: 'Marketplace', icon: Store, page: 'Marketplace', roles: ['admin'] },
-  ];
+    { name: 'Partner Discovery', icon: Store, page: 'Marketplace', roles: ['admin'] },
+    { name: 'Dropdown Manager', icon: Settings, page: 'DropdownManager', roles: ['admin'] },
+    { name: 'Tier Settings', icon: Settings, page: 'TierSettings', roles: ['admin'] },
+    ];
 
   const navigation = navigationItems.filter(item => 
     user?.role && item.roles.includes(user.role)
@@ -116,7 +122,7 @@ export default function Layout({ children, currentPageName }) {
               </button>
 
               <div className="flex items-center gap-4">
-                {isAdmin && (
+                {isOriginalAdmin && (
                   <PartnerSelector 
                     value={mimicPartnerId} 
                     onChange={setMimicPartnerId}
@@ -150,5 +156,13 @@ export default function Layout({ children, currentPageName }) {
         />
       )}
     </div>
+  );
+}
+
+export default function Layout({ children, currentPageName }) {
+  return (
+    <MimicProvider>
+      <LayoutContent children={children} currentPageName={currentPageName} />
+    </MimicProvider>
   );
 }

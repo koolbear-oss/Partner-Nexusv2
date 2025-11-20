@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AddTeamMemberDialog from '../components/partners/AddTeamMemberDialog';
+import TierBreakdown from '../components/partners/TierBreakdown';
 import { useCurrentUser } from '../components/hooks/useCurrentUser';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -120,12 +121,21 @@ export default function PartnerDetail() {
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Link to={createPageUrl('Partners')}>
-        <button className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Partners</span>
-        </button>
-      </Link>
+      <div className="flex justify-between items-center">
+        <Link to={createPageUrl('Partners')}>
+          <button className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Partners</span>
+          </button>
+        </Link>
+        {isAdmin && (
+          <Link to={createPageUrl(`EditPartner?id=${partnerId}`)}>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              Edit Partner
+            </Button>
+          </Link>
+        )}
+      </div>
 
       {/* Header Card */}
       <Card className="shadow-md border-t-4 border-t-blue-600">
@@ -264,13 +274,18 @@ export default function PartnerDetail() {
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="bg-white border border-slate-200 p-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="certifications">Certifications</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-        </TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="rankings">Rankings</TabsTrigger>
+            <TabsTrigger value="team">Team</TabsTrigger>
+            <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
+            <TabsTrigger value="projects">Projects</TabsTrigger>
+            <TabsTrigger value="certifications">Certifications</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+          </TabsList>
+
+        <TabsContent value="rankings">
+          <TierBreakdown partnerId={partnerId} />
+        </TabsContent>
 
         <TabsContent value="team">
           <Card className="shadow-sm">
@@ -319,58 +334,81 @@ export default function PartnerDetail() {
         </TabsContent>
 
         <TabsContent value="capabilities">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Solution Capabilities</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {capabilities.length > 0 ? (
-                <div className="space-y-4">
-                  {capabilities.map(cap => {
-                    const solution = solutions.find(s => s.id === cap.solution_id);
-                    const levelColors = {
-                      beginner: 'bg-gray-100 text-gray-800',
-                      competent: 'bg-blue-100 text-blue-800',
-                      proficient: 'bg-purple-100 text-purple-800',
-                      expert: 'bg-green-100 text-green-800'
-                    };
-                    return (
-                      <div key={cap.id} className="p-4 rounded-lg bg-slate-50 border border-slate-200">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="font-semibold text-slate-900">{solution?.name || 'Unknown Solution'}</div>
-                          <Badge className={levelColors[cap.overall_level]}>
-                            {cap.overall_level.toUpperCase()}
-                          </Badge>
+          <div className="space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Authorized Product Groups</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {partner.product_groups && partner.product_groups.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {partner.product_groups.map((pg, index) => (
+                      <Badge key={index} className="bg-indigo-100 text-indigo-800 border-indigo-200 border px-3 py-1">
+                        {pg}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    No product groups assigned yet
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Solution Capabilities</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {capabilities.length > 0 ? (
+                  <div className="space-y-4">
+                    {capabilities.map(cap => {
+                      const solution = solutions.find(s => s.id === cap.solution_id);
+                      const levelColors = {
+                        beginner: 'bg-gray-100 text-gray-800',
+                        competent: 'bg-blue-100 text-blue-800',
+                        proficient: 'bg-purple-100 text-purple-800',
+                        expert: 'bg-green-100 text-green-800'
+                      };
+                      return (
+                        <div key={cap.id} className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="font-semibold text-slate-900">{solution?.name || 'Unknown Solution'}</div>
+                            <Badge className={levelColors[cap.overall_level]}>
+                              {cap.overall_level.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <div className="text-xs text-slate-500">Certified Team</div>
+                              <div className="font-semibold text-slate-900">{cap.certified_team_members || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-500">Projects</div>
+                              <div className="font-semibold text-slate-900">{cap.projects_completed || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-500">Total Revenue</div>
+                              <div className="font-semibold text-slate-900">€{(cap.total_revenue / 1000).toFixed(0)}K</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-500">Success Rate</div>
+                              <div className="font-semibold text-slate-900">{cap.success_rate || 100}%</div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <div className="text-xs text-slate-500">Certified Team</div>
-                            <div className="font-semibold text-slate-900">{cap.certified_team_members || 0}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-slate-500">Projects</div>
-                            <div className="font-semibold text-slate-900">{cap.projects_completed || 0}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-slate-500">Total Revenue</div>
-                            <div className="font-semibold text-slate-900">€{(cap.total_revenue / 1000).toFixed(0)}K</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-slate-500">Success Rate</div>
-                            <div className="font-semibold text-slate-900">{cap.success_rate || 100}%</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  No capability data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    No capability data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">

@@ -14,11 +14,14 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { useCurrentUser } from '../components/hooks/useCurrentUser';
 import { format } from 'date-fns';
+import DocumentManager from '../components/projects/DocumentManager';
+import CommentSection from '../components/projects/CommentSection';
+import PhaseManager from '../components/projects/PhaseManager';
 
 export default function ProjectDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get('id');
-  const { isAdmin } = useCurrentUser();
+  const { isAdmin, canEditPartnerData } = useCurrentUser();
   const queryClient = useQueryClient();
 
   const { data: project, isLoading } = useQuery({
@@ -285,115 +288,15 @@ export default function ProjectDetail() {
         </TabsContent>
 
         <TabsContent value="phases">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Project Phases</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {project.current_phase && (
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-semibold text-slate-700">Current Phase</span>
-                    <Badge className="bg-blue-100 text-blue-800">
-                      {project.current_phase}
-                    </Badge>
-                  </div>
-                  {phaseProgress > 0 && (
-                    <Progress value={phaseProgress} className="h-2" />
-                  )}
-                </div>
-              )}
-              {project.phase_history && project.phase_history.length > 0 ? (
-                <div className="space-y-3">
-                  {project.phase_history.map((phase, idx) => (
-                    <div key={idx} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
-                      {phase.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-blue-600" />
-                      )}
-                      <div className="flex-1">
-                        <div className="font-semibold text-slate-900">{phase.phase}</div>
-                        <div className="text-xs text-slate-500">
-                          Started: {format(new Date(phase.started), 'MMM d, yyyy')}
-                          {phase.completed && ` • Completed: ${format(new Date(phase.completed), 'MMM d, yyyy')}`}
-                        </div>
-                      </div>
-                      <Badge className={phase.completed ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
-                        {phase.status || (phase.completed ? 'completed' : 'in progress')}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  No phase history available
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PhaseManager project={project} canEdit={isAdmin || canEditPartnerData} />
         </TabsContent>
 
         <TabsContent value="documents">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Project Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {project.documents && project.documents.length > 0 ? (
-                <div className="space-y-3">
-                  {project.documents.map((doc, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-slate-600" />
-                        <div>
-                          <div className="font-semibold text-slate-900">{doc.name}</div>
-                          <div className="text-xs text-slate-500">
-                            {doc.type} • Uploaded by {doc.uploaded_by}
-                          </div>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline">View</Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  No documents uploaded yet
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <DocumentManager project={project} canEdit={isAdmin || canEditPartnerData} />
         </TabsContent>
 
         <TabsContent value="comments">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Project Comments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {project.comments && project.comments.length > 0 ? (
-                <div className="space-y-4">
-                  {project.comments.map((comment, idx) => (
-                    <div key={idx} className="p-4 bg-slate-50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <MessageSquare className="w-4 h-4 text-slate-600" />
-                        <span className="font-semibold text-slate-900">{comment.author}</span>
-                        <span className="text-xs text-slate-500">
-                          {format(new Date(comment.timestamp), 'MMM d, yyyy HH:mm')}
-                        </span>
-                      </div>
-                      <p className="text-slate-700">{comment.text}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  No comments yet
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CommentSection project={project} canComment={isAdmin || canEditPartnerData} />
         </TabsContent>
 
         {project.status === 'completed' && (

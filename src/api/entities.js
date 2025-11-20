@@ -39,6 +39,20 @@ export const Achievement = base44.entities.Achievement;
 
 export const PartnerAchievement = base44.entities.PartnerAchievement;
 
+export const DropdownValue = base44.entities.DropdownValue;
+
+export const ProductGroupDiscount = base44.entities.ProductGroupDiscount;
+
+export const ProjectExtraDiscountRule = base44.entities.ProjectExtraDiscountRule;
+
+export const PartnerVerticalScore = base44.entities.PartnerVerticalScore;
+
+export const PartnerSolutionScore = base44.entities.PartnerSolutionScore;
+
+export const PartnerSolutionVerticalScore = base44.entities.PartnerSolutionVerticalScore;
+
+export const TierConfiguration = base44.entities.TierConfiguration;
+
 
 
 // auth sdk:

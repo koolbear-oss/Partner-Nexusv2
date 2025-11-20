@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Store, Mail, Phone, MapPin, Award, TrendingUp, Eye, EyeOff } from 'lucide-react';
+import { Search, Store, Mail, Phone, MapPin, Award, TrendingUp, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
@@ -68,13 +68,13 @@ export default function Marketplace() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Partner Marketplace</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Partner Discovery</h1>
           <p className="text-slate-600 mt-2">
-            Browse {filteredPartners.length} partners available for collaboration
+            Internal directory of {visiblePartners.length} partners who have opted-in to be discoverable for project matching
           </p>
-          <div className="flex items-center gap-2 mt-2 text-sm text-slate-500">
-            <Eye className="w-4 h-4" />
-            <span>Partners must opt-in to appear in the marketplace</span>
+          <div className="flex items-center gap-2 mt-2 text-sm text-amber-600">
+            <AlertCircle className="w-4 h-4" />
+            <span>Admin-only view: Partners who opt-in make their capabilities visible to ASSA ABLOY for better project assignments</span>
           </div>
         </div>
       </div>
@@ -320,5 +320,3 @@ export default function Marketplace() {
     </div>
   );
 }
-
-import { CheckCircle2 } from 'lucide-react';

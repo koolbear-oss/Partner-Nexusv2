@@ -15,12 +15,12 @@ export default function PartnerSelector({ value, onChange }) {
   return (
     <div className="flex items-center gap-2">
       <Building2 className="w-4 h-4 text-slate-400" />
-      <Select value={value || ''} onValueChange={onChange}>
+      <Select value={value || 'admin'} onValueChange={(val) => onChange(val === 'admin' ? null : val)}>
         <SelectTrigger className="w-64 bg-white">
-          <SelectValue placeholder="View as Partner..." />
+          <SelectValue placeholder="Admin View (All Data)" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={null}>Admin View (All Data)</SelectItem>
+          <SelectItem value="admin">Admin View (All Data)</SelectItem>
           {activePartners.map(partner => (
             <SelectItem key={partner.id} value={partner.id}>
               {partner.company_name}

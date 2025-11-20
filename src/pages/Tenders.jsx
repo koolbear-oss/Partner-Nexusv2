@@ -62,16 +62,23 @@ export default function Tenders() {
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Tender Management</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            {isAdmin ? 'Tender Management' : 'Project Opportunities'}
+          </h1>
           <p className="text-slate-600 mt-2">
-            {isAdmin ? 'Manage tenders and partner responses' : 'Browse and respond to available tenders'}
+            {isAdmin 
+              ? `${tenders.length} active tenders across various industries` 
+              : `${tenders.length} project opportunities from ASSA ABLOY available for your response`
+            }
           </p>
         </div>
         {isAdmin && (
-          <Button className="bg-blue-900 hover:bg-blue-800">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Tender
-          </Button>
+          <Link to={createPageUrl('CreateTender')}>
+            <Button className="bg-blue-900 hover:bg-blue-800">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Tender
+            </Button>
+          </Link>
         )}
       </div>
 
