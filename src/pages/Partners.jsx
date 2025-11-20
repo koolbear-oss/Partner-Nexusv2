@@ -3,9 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, MapPin, Phone, Mail, ExternalLink, Award, TrendingUp } from 'lucide-react';
+import { Search, Filter, MapPin, Phone, Mail, ExternalLink, Award, TrendingUp, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
@@ -52,6 +53,12 @@ export default function Partners() {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Partner Network</h1>
           <p className="text-slate-600 mt-2">Manage your {partners.length} partners across all tiers and types</p>
         </div>
+        <Link to={createPageUrl('CreatePartner')}>
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Partner
+          </Button>
+        </Link>
       </div>
 
       {/* Filters */}

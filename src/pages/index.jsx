@@ -20,6 +20,18 @@ import Analytics from "./Analytics";
 
 import Marketplace from "./Marketplace";
 
+import Tenders from "./Tenders";
+
+import Achievements from "./Achievements";
+
+import ProjectDetail from "./ProjectDetail";
+
+import TenderDetail from "./TenderDetail";
+
+import CreateProject from "./CreateProject";
+
+import CreatePartner from "./CreatePartner";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -43,6 +55,18 @@ const PAGES = {
     Analytics: Analytics,
     
     Marketplace: Marketplace,
+    
+    Tenders: Tenders,
+    
+    Achievements: Achievements,
+    
+    ProjectDetail: ProjectDetail,
+    
+    TenderDetail: TenderDetail,
+    
+    CreateProject: CreateProject,
+    
+    CreatePartner: CreatePartner,
     
 }
 
@@ -90,6 +114,18 @@ function PagesContent() {
                 <Route path="/Analytics" element={<Analytics />} />
                 
                 <Route path="/Marketplace" element={<Marketplace />} />
+                
+                <Route path="/Tenders" element={<Tenders />} />
+                
+                <Route path="/Achievements" element={<Achievements />} />
+                
+                <Route path="/ProjectDetail" element={<ProjectDetail />} />
+                
+                <Route path="/TenderDetail" element={<TenderDetail />} />
+                
+                <Route path="/CreateProject" element={<CreateProject />} />
+                
+                <Route path="/CreatePartner" element={<CreatePartner />} />
                 
             </Routes>
         </Layout>

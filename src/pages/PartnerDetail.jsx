@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,14 +18,20 @@ import {
   Calendar,
   CheckCircle2,
   AlertCircle,
-  Building2
+  Building2,
+  UserPlus
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import AddTeamMemberDialog from '../components/partners/AddTeamMemberDialog';
+import { useCurrentUser } from '../components/hooks/useCurrentUser';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
 export default function PartnerDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const partnerId = urlParams.get('id');
+  const { isAdmin } = useCurrentUser();
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
 
   const { data: partner, isLoading } = useQuery({
     queryKey: ['partner', partnerId],
@@ -50,6 +56,24 @@ export default function PartnerDetail() {
     queryFn: async () => {
       const allCerts = await base44.entities.Certification.list();
       return allCerts.filter(c => c.partner_id === partnerId);
+    },
+    enabled: !!partnerId,
+  });
+
+  const { data: teamMembers = [] } = useQuery({
+    queryKey: ['partner-team', partnerId],
+    queryFn: async () => {
+      const allMembers = await base44.entities.TeamMember.list();
+      return allMembers.filter(m => m.partner_id === partnerId);
+    },
+    enabled: !!partnerId,
+  });
+
+  const { data: capabilities = [] } = useQuery({
+    queryKey: ['partner-capabilities', partnerId],
+    queryFn: async () => {
+      const allCaps = await base44.entities.PartnerSolutionCapability.list();
+      return allCaps.filter(c => c.partner_id === partnerId);
     },
     enabled: !!partnerId,
   });
@@ -123,24 +147,26 @@ export default function PartnerDetail() {
                   <Mail className="w-5 h-5" />
                   <div>
                     <div className="text-xs text-slate-500">Email</div>
-                    <div className="font-medium">{partner.contact_email}</div>
+                    <div className="font-medium">{partner.primary_contact?.email || partner.contact_email}</div>
                   </div>
                 </div>
-                {partner.contact_phone && (
+                {(partner.primary_contact?.phone || partner.contact_phone) && (
                   <div className="flex items-center gap-3 text-slate-600">
                     <Phone className="w-5 h-5" />
                     <div>
                       <div className="text-xs text-slate-500">Phone</div>
-                      <div className="font-medium">{partner.contact_phone}</div>
+                      <div className="font-medium">{partner.primary_contact?.phone || partner.contact_phone}</div>
                     </div>
                   </div>
                 )}
-                {partner.address && (
+                {(partner.addresses?.[0]?.street || partner.address) && (
                   <div className="flex items-center gap-3 text-slate-600">
                     <MapPin className="w-5 h-5" />
                     <div>
                       <div className="text-xs text-slate-500">Address</div>
-                      <div className="font-medium">{partner.address}</div>
+                      <div className="font-medium">
+                        {partner.addresses?.[0] ? `${partner.addresses[0].street}, ${partner.addresses[0].city}` : partner.address}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -163,12 +189,17 @@ export default function PartnerDetail() {
                 </Badge>
                 <Badge variant="outline" className="bg-slate-50">
                   <Users className="w-3 h-3 mr-1" />
-                  {partner.employee_count} employees
+                  {partner.team_size || partner.employee_count} employees
                 </Badge>
-                {partner.onboarding_date && (
+                {partner.vat_number && (
+                  <Badge variant="outline" className="bg-slate-50">
+                    VAT: {partner.vat_number}
+                  </Badge>
+                )}
+                {(partner.active_since || partner.onboarding_date) && (
                   <Badge variant="outline" className="bg-slate-50">
                     <Calendar className="w-3 h-3 mr-1" />
-                    Since {new Date(partner.onboarding_date).getFullYear()}
+                    Since {new Date(partner.active_since || partner.onboarding_date).getFullYear()}
                   </Badge>
                 )}
               </div>
@@ -234,10 +265,113 @@ export default function PartnerDetail() {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="bg-white border border-slate-200 p-1">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="certifications">Certifications</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="team">
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Team Members ({teamMembers.length})</CardTitle>
+              {isAdmin && (
+                <Button onClick={() => setShowAddMemberDialog(true)} size="sm">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Member
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {teamMembers.length > 0 ? (
+                <div className="space-y-3">
+                  {teamMembers.map(member => (
+                    <div key={member.id} className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-semibold text-slate-900">{member.first_name} {member.last_name}</div>
+                          <div className="text-sm text-slate-600">{member.job_title || member.role.replace(/_/g, ' ')}</div>
+                        </div>
+                        <Badge className={member.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          {member.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-slate-500 mt-2">
+                        <span>{member.email}</span>
+                        {member.phone && <><span>•</span><span>{member.phone}</span></>}
+                      </div>
+                      {member.certifications?.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-600">
+                          {member.certifications.length} certification(s)
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  No team members registered
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="capabilities">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Solution Capabilities</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {capabilities.length > 0 ? (
+                <div className="space-y-4">
+                  {capabilities.map(cap => {
+                    const solution = solutions.find(s => s.id === cap.solution_id);
+                    const levelColors = {
+                      beginner: 'bg-gray-100 text-gray-800',
+                      competent: 'bg-blue-100 text-blue-800',
+                      proficient: 'bg-purple-100 text-purple-800',
+                      expert: 'bg-green-100 text-green-800'
+                    };
+                    return (
+                      <div key={cap.id} className="p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="font-semibold text-slate-900">{solution?.name || 'Unknown Solution'}</div>
+                          <Badge className={levelColors[cap.overall_level]}>
+                            {cap.overall_level.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <div className="text-xs text-slate-500">Certified Team</div>
+                            <div className="font-semibold text-slate-900">{cap.certified_team_members || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500">Projects</div>
+                            <div className="font-semibold text-slate-900">{cap.projects_completed || 0}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500">Total Revenue</div>
+                            <div className="font-semibold text-slate-900">€{(cap.total_revenue / 1000).toFixed(0)}K</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-slate-500">Success Rate</div>
+                            <div className="font-semibold text-slate-900">{cap.success_rate || 100}%</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  No capability data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -436,7 +570,15 @@ export default function PartnerDetail() {
             </Card>
           </div>
         </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
+        </Tabs>
+
+        {showAddMemberDialog && (
+        <AddTeamMemberDialog
+          open={showAddMemberDialog}
+          onClose={() => setShowAddMemberDialog(false)}
+          partnerId={partnerId}
+        />
+        )}
+        </div>
+        );
+        }

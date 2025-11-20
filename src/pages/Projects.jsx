@@ -4,8 +4,9 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Briefcase, Calendar, DollarSign, Building2, Sparkles } from 'lucide-react';
+import { Search, Briefcase, Calendar, DollarSign, Building2, Sparkles, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { format } from 'date-fns';
@@ -72,14 +73,24 @@ export default function Projects() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Project Portfolio</h1>
-        <p className="text-slate-600 mt-2">
-          {isAdmin 
-            ? `Track and orchestrate ${projects.length} projects across your partner network`
-            : `Your assigned and matched projects (${projects.length})`
-          }
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Project Portfolio</h1>
+          <p className="text-slate-600 mt-2">
+            {isAdmin 
+              ? `Track and orchestrate ${projects.length} projects across your partner network`
+              : `Your assigned and matched projects (${projects.length})`
+            }
+          </p>
+        </div>
+        {!isAdmin && (
+          <Link to={createPageUrl('CreateProject')}>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Submit New Project
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

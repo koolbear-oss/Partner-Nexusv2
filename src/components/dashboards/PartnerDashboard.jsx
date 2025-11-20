@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
   Briefcase, 
   Award,
@@ -35,7 +36,10 @@ export default function PartnerDashboard() {
 
   const { data: certifications = [] } = useQuery({
     queryKey: ['partner-certifications'],
-    queryFn: () => base44.entities.Certification.list(),
+    queryFn: async () => {
+      const allCerts = await base44.entities.Certification.list();
+      return allCerts.filter(c => c.partner_id === partnerId);
+    },
     enabled: !!partnerId,
   });
 
@@ -59,7 +63,14 @@ export default function PartnerDashboard() {
 
   const activeProjects = projects.filter(p => p.status === 'in_progress' || p.status === 'assigned').length;
   const completedProjects = projects.filter(p => p.status === 'completed').length;
-  const expiringCerts = certifications.filter(c => c.status === 'expiring_soon').length;
+  const expiringCerts = certifications.filter(c => {
+    if (c.status === 'expiring_soon') return true;
+    if (c.status === 'expired') return true;
+    const daysUntilExpiry = Math.floor((new Date(c.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+  }).length;
+  
+  const expiredCerts = certifications.filter(c => c.status === 'expired').length;
   const verifiedCompetencies = competencies.filter(c => c.verified).length;
 
   const recentProjects = [...projects]
@@ -140,18 +151,26 @@ export default function PartnerDashboard() {
         </Card>
       </div>
 
-      {expiringCerts > 0 && (
-        <Card className="border-l-4 border-l-yellow-500 bg-yellow-50/50">
+      {(expiringCerts > 0 || expiredCerts > 0) && (
+        <Card className={`border-l-4 ${expiredCerts > 0 ? 'border-l-red-500 bg-red-50/50' : 'border-l-yellow-500 bg-yellow-50/50'}`}>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-yellow-600" />
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className={`w-5 h-5 ${expiredCerts > 0 ? 'text-red-600' : 'text-yellow-600'}`} />
               <div>
-                <div className="font-semibold text-yellow-900">Certification Renewal Required</div>
-                <div className="text-sm text-yellow-700 mt-1">
-                  {expiringCerts} certification{expiringCerts > 1 ? 's' : ''} expiring within 30 days
+                <div className={`font-semibold ${expiredCerts > 0 ? 'text-red-900' : 'text-yellow-900'}`}>
+                  {expiredCerts > 0 ? 'Certification Action Required' : 'Certification Renewal Required'}
+                </div>
+                <div className={`text-sm ${expiredCerts > 0 ? 'text-red-700' : 'text-yellow-700'} mt-1`}>
+                  {expiredCerts > 0 && `${expiredCerts} certification${expiredCerts > 1 ? 's' : ''} expired. `}
+                  {expiringCerts > 0 && `${expiringCerts} certification${expiringCerts > 1 ? 's' : ''} expiring within 30 days.`}
                 </div>
               </div>
             </div>
+            <Link to={createPageUrl('Certifications')}>
+              <Button size="sm" className={expiredCerts > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-600 hover:bg-yellow-700'}>
+                View Certifications
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       )}

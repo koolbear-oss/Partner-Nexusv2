@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
-import { TrendingUp, Users, Briefcase, Award, DollarSign, Target } from 'lucide-react';
+import { TrendingUp, Users, Briefcase, Award, DollarSign, Target, Download, Calendar } from 'lucide-react';
+import PerformanceReportCard from '../components/analytics/PerformanceReportCard';
 
 export default function Analytics() {
+  const [selectedPeriod, setSelectedPeriod] = useState('current');
+
   const { data: partners = [] } = useQuery({
     queryKey: ['partners'],
     queryFn: () => base44.entities.Partner.list(),
@@ -25,6 +30,16 @@ export default function Analytics() {
   const { data: verticals = [] } = useQuery({
     queryKey: ['verticals'],
     queryFn: () => base44.entities.Vertical.list(),
+  });
+
+  const { data: bonuses = [] } = useQuery({
+    queryKey: ['bonuses'],
+    queryFn: () => base44.entities.BonusCalculation.list(),
+  });
+
+  const { data: tierScores = [] } = useQuery({
+    queryKey: ['tier-scores'],
+    queryFn: () => base44.entities.TierScore.list('-calculation_date', 50),
   });
 
   // Partner Tier Distribution
@@ -89,59 +104,59 @@ export default function Analytics() {
     ? ((partners.filter(p => p.certifications_valid).length / partners.length) * 100).toFixed(0)
     : 0;
 
+  const totalBonusPaid = bonuses.filter(b => b.payment_status === 'paid').reduce((sum, b) => sum + (b.total_bonus || b.bonus_amount || 0), 0);
+  const completedProjects = projects.filter(p => p.status === 'completed').length;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Strategic Analytics</h1>
-        <p className="text-slate-600 mt-2">Network intelligence and performance insights</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Strategic Analytics</h1>
+          <p className="text-slate-600 mt-2">Network intelligence and performance insights</p>
+        </div>
+        <Button variant="outline" className="gap-2">
+          <Download className="w-4 h-4" />
+          Export Report
+        </Button>
       </div>
 
-      {/* KPI Overview */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="bg-white border border-slate-200 p-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="partners">Partner Analytics</TabsTrigger>
+          <TabsTrigger value="projects">Project Analytics</TabsTrigger>
+          <TabsTrigger value="performance">Performance Trends</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-sm border-l-4 border-l-blue-600">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <Users className="w-8 h-8 text-blue-600" />
-              <Badge className="bg-blue-100 text-blue-800">Network</Badge>
-            </div>
-            <p className="text-sm text-slate-600">Active Partners</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">
-              {partners.filter(p => p.status === 'active').length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-l-4 border-l-green-600">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <DollarSign className="w-8 h-8 text-green-600" />
-              <Badge className="bg-green-100 text-green-800">Revenue</Badge>
-            </div>
-            <p className="text-sm text-slate-600">Quarterly Revenue</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">
-              €{(totalRevenue / 1000).toFixed(0)}K
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-l-4 border-l-purple-600">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <Target className="w-8 h-8 text-purple-600" />
-              <Badge className="bg-purple-100 text-purple-800">Quality</Badge>
-            </div>
-            <p className="text-sm text-slate-600">Avg Tier Score</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">{avgTierScore}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-l-4 border-l-amber-600">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <Award className="w-8 h-8 text-amber-600" />
-              <Badge className="bg-amber-100 text-amber-800">Compliance</Badge>
-            </div>
-            <p className="text-sm text-slate-600">Cert. Compliance</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">{certificationCompliance}%</p>
-          </CardContent>
-        </Card>
+        <PerformanceReportCard
+          title="Active Partners"
+          currentValue={partners.filter(p => p.status === 'active').length}
+          icon={Users}
+          color="blue"
+        />
+        <PerformanceReportCard
+          title="Quarterly Revenue"
+          currentValue={`${(totalRevenue / 1000).toFixed(0)}K`}
+          unit="€"
+          icon={DollarSign}
+          color="green"
+        />
+        <PerformanceReportCard
+          title="Completed Projects"
+          currentValue={completedProjects}
+          icon={Briefcase}
+          color="purple"
+        />
+        <PerformanceReportCard
+          title="Total Bonuses Paid"
+          currentValue={`${(totalBonusPaid / 1000).toFixed(0)}K`}
+          unit="€"
+          icon={Award}
+          color="amber"
+        />
       </div>
 
       {/* Charts Row 1 */}
@@ -285,6 +300,134 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="partners" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Partner Tier Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={tierData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {tierData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Revenue by Tier</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={revenueByTier}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="tier" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `€${(value / 1000).toFixed(0)}K`} />
+                    <Bar dataKey="revenue" fill="#10b981" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="projects" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Project Pipeline Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={projectStatusData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" width={80} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#8b5cf6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Vertical Market Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {verticalPerformance.map((vertical, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <div className="font-semibold text-slate-900">{vertical.name}</div>
+                        <div className="text-xs text-slate-500">{vertical.projects} projects</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-green-700">
+                          €{(vertical.value / 1000).toFixed(0)}K
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Top 5 Partners by Tier Score</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topPartners.map((partner, idx) => (
+                  <div key={partner.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                        idx === 0 ? 'bg-yellow-400 text-yellow-900' :
+                        idx === 1 ? 'bg-slate-300 text-slate-700' :
+                        idx === 2 ? 'bg-orange-400 text-orange-900' :
+                        'bg-slate-200 text-slate-600'
+                      }`}>
+                        #{idx + 1}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">{partner.company_name}</div>
+                        <div className="text-xs text-slate-500">{partner.tier} tier</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-slate-900">{partner.tier_score}</div>
+                      <div className="text-xs text-slate-500">score</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
