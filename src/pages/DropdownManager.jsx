@@ -380,14 +380,15 @@ export default function DropdownManager() {
 
       <Tabs defaultValue="solutions" className="space-y-6">
         <TabsList className="bg-white border border-slate-200 p-1 flex-wrap h-auto">
-          <TabsTrigger value="solutions">Solutions</TabsTrigger>
+          <TabsTrigger value="solutions">Solution Types</TabsTrigger>
+          <TabsTrigger value="assa_abloy_products">ASSA ABLOY Products</TabsTrigger>
           <TabsTrigger value="verticals">Verticals</TabsTrigger>
           <TabsTrigger value="partner_type">Partner Types</TabsTrigger>
+          <TabsTrigger value="service_coverage">Service Coverage</TabsTrigger>
           <TabsTrigger value="partner_tier">Partner Tiers</TabsTrigger>
           <TabsTrigger value="service_type">Services</TabsTrigger>
           <TabsTrigger value="project_phase">Project Phases</TabsTrigger>
           <TabsTrigger value="competency_level">Competency Levels</TabsTrigger>
-          <TabsTrigger value="product_group">Product Groups</TabsTrigger>
           <TabsTrigger value="project_type">Project Types</TabsTrigger>
         </TabsList>
 
@@ -395,9 +396,19 @@ export default function DropdownManager() {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Solution Types</CardTitle>
-              <p className="text-sm text-slate-600">Manage solution categories for partners and projects</p>
+              <p className="text-sm text-slate-600">Broad security and safety service categories that define project scope and partner capabilities (e.g., Access Control Systems, Video Surveillance, Intrusion Detection)</p>
             </CardHeader>
             <CardContent>{renderSolutionsList()}</CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assa_abloy_products">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">ASSA ABLOY Products</CardTitle>
+              <p className="text-sm text-slate-600">Specific ASSA ABLOY product lines (e.g., Mechanical, Electromechanical, Aperio, CLIQ, SMARTair, CUMULUS). Used for partner authorization, project tracking, and discount matrix calculations.</p>
+            </CardHeader>
+            <CardContent>{renderDropdownList('assa_abloy_products', 'ASSA ABLOY Products')}</CardContent>
           </Card>
         </TabsContent>
 
@@ -405,7 +416,7 @@ export default function DropdownManager() {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Vertical Markets</CardTitle>
-              <p className="text-sm text-slate-600">Manage vertical market categories</p>
+              <p className="text-sm text-slate-600">Industry verticals and market segments (e.g., Healthcare, Education, Commercial, Government)</p>
             </CardHeader>
             <CardContent>{renderVerticalsList()}</CardContent>
           </Card>
@@ -418,6 +429,27 @@ export default function DropdownManager() {
               <p className="text-sm text-slate-600">Define partner classifications</p>
             </CardHeader>
             <CardContent>{renderDropdownList('partner_type', 'Partner Types')}</CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="service_coverage">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Service Coverage Options</CardTitle>
+              <p className="text-sm text-slate-600">Define regional and language coverage combinations for partner capabilities and project requirements</p>
+            </CardHeader>
+            <CardContent>
+              {renderDropdownList('service_region_language', 'Service Coverage')}
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-900 mb-2">Service Coverage Guidelines</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Define geographic regions combined with language capabilities</li>
+                  <li>• Examples: "Belgium - All Regions & Languages", "Wallonia - French", "Brussels - Bilingual (NL/FR)"</li>
+                  <li>• Used for matching partners to project locations and language requirements</li>
+                  <li>• System will auto-infer from postal codes but explicit options provide clarity</li>
+                </ul>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
@@ -458,16 +490,6 @@ export default function DropdownManager() {
               <p className="text-sm text-slate-600">Skill level classifications</p>
             </CardHeader>
             <CardContent>{renderDropdownList('competency_level', 'Competency Levels')}</CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="product_group">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Product Groups</CardTitle>
-              <p className="text-sm text-slate-600">ASSA ABLOY product categories</p>
-            </CardHeader>
-            <CardContent>{renderDropdownList('product_group', 'Product Groups')}</CardContent>
           </Card>
         </TabsContent>
 

@@ -29,6 +29,8 @@ export default function CreateProject() {
     project_type: 'new_installation',
     complexity: 'medium',
     deadline: '',
+    project_language: 'nl',
+    required_service_coverage: [],
     project_location: {
       street: '',
       city: '',
@@ -39,7 +41,8 @@ export default function CreateProject() {
       name: '',
       email: '',
       phone: ''
-    }
+    },
+    assa_abloy_products: []
   });
 
   const { data: solutions = [] } = useQuery({
@@ -69,10 +72,32 @@ export default function CreateProject() {
     },
   });
 
+  const { data: assaAbloyProducts = [] } = useQuery({
+    queryKey: ['assaAbloyProducts'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'assa_abloy_products' && v.active);
+    },
+  });
+
+  const { data: serviceCoverageOptions = [] } = useQuery({
+    queryKey: ['serviceCoverageOptions'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'service_region_language' && v.active);
+    },
+  });
+
   // Filter product groups based on partner's allowed groups
   const allowedProductGroups = productGroups.filter(pg => 
     !currentPartner?.product_groups || currentPartner.product_groups.length === 0 || 
     currentPartner.product_groups.includes(pg.value)
+  );
+
+  // Filter ASSA ABLOY products based on partner's authorization
+  const allowedAssaAbloyProducts = assaAbloyProducts.filter(product =>
+    !currentPartner?.assa_abloy_products || currentPartner.assa_abloy_products.length === 0 ||
+    currentPartner.assa_abloy_products.includes(product.value)
   );
 
   const createProjectMutation = useMutation({
@@ -261,6 +286,33 @@ export default function CreateProject() {
                 )}
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>ASSA ABLOY Product Solutions</Label>
+              <p className="text-xs text-slate-500 mb-2">Select which ASSA ABLOY products are likely present in this project</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-3 bg-slate-50 rounded-lg border border-slate-200">
+                {allowedAssaAbloyProducts.length > 0 ? (
+                  allowedAssaAbloyProducts.map(product => (
+                    <label key={product.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.assa_abloy_products?.includes(product.value)}
+                        onChange={(e) => {
+                          const current = formData.assa_abloy_products || [];
+                          const updated = e.target.checked
+                            ? [...current, product.value]
+                            : current.filter(v => v !== product.value);
+                          updateField('assa_abloy_products', updated);
+                        }}
+                      />
+                      <span className="text-sm">{product.label}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 italic col-span-3">No ASSA ABLOY products available for your partner profile</p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -290,6 +342,54 @@ export default function CreateProject() {
                   value={formData.deadline}
                   onChange={(e) => updateField('deadline', e.target.value)}
                 />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Service Coverage & Language */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Service Coverage & Language Requirements</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="project_language">Project Language *</Label>
+              <Select value={formData.project_language} onValueChange={(val) => updateField('project_language', val)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nl">Dutch (NL)</SelectItem>
+                  <SelectItem value="fr">French (FR)</SelectItem>
+                  <SelectItem value="en">English (EN)</SelectItem>
+                  <SelectItem value="bilingual">Bilingual (NL/FR)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Required Service Coverage</Label>
+              <p className="text-xs text-slate-500 mb-2">Select the regional and language coverage needed for this project</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
+                {serviceCoverageOptions.map(option => (
+                  <label key={option.id} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-white bg-white">
+                    <input
+                      type="checkbox"
+                      checked={formData.required_service_coverage?.includes(option.value)}
+                      onChange={(e) => {
+                        const current = formData.required_service_coverage || [];
+                        const updated = e.target.checked
+                          ? [...current, option.value]
+                          : current.filter(v => v !== option.value);
+                        updateField('required_service_coverage', updated);
+                      }}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm text-slate-900">{option.label}</div>
+                      <div className="text-xs text-slate-500">{option.description}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
           </CardContent>

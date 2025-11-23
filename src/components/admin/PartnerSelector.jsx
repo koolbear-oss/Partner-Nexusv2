@@ -10,18 +10,20 @@ export default function PartnerSelector({ value, onChange }) {
     queryFn: () => base44.entities.Partner.list(),
   });
 
-  const activePartners = partners.filter(p => p.status === 'active');
+  const allPartners = partners.filter(p => ['active', 'pending_onboarding'].includes(p.status));
 
   return (
     <div className="flex items-center gap-2">
       <Building2 className="w-4 h-4 text-slate-400" />
       <Select value={value || 'admin'} onValueChange={(val) => onChange(val === 'admin' ? null : val)}>
         <SelectTrigger className="w-64 bg-white">
-          <SelectValue placeholder="Admin View (All Data)" />
+          <SelectValue>
+            {value ? allPartners.find(p => p.id === value)?.company_name : 'Admin View (All Data)'}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="admin">Admin View (All Data)</SelectItem>
-          {activePartners.map(partner => (
+          {allPartners.map(partner => (
             <SelectItem key={partner.id} value={partner.id}>
               {partner.company_name}
             </SelectItem>

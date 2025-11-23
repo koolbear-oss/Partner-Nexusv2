@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import DocumentManager from '../components/projects/DocumentManager';
 import CommentSection from '../components/projects/CommentSection';
 import PhaseManager from '../components/projects/PhaseManager';
+import ServiceCoverageMatch from '../components/projects/ServiceCoverageMatch';
 
 export default function ProjectDetail() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -51,6 +52,14 @@ export default function ProjectDetail() {
   const { data: verticals = [] } = useQuery({
     queryKey: ['verticals'],
     queryFn: () => base44.entities.Vertical.list(),
+  });
+
+  const { data: serviceCoverageOptions = [] } = useQuery({
+    queryKey: ['serviceCoverageOptions'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'service_region_language' && v.active);
+    },
   });
 
   const { data: teamMembers = [] } = useQuery({
@@ -111,13 +120,13 @@ export default function ProjectDetail() {
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <h1 className="text-3xl font-bold text-slate-900">{project.project_name}</h1>
                 <Badge className={statusColors[project.status]}>
-                  {project.status.replace(/_/g, ' ')}
+                  {(project.status || 'tender_stage').replace(/_/g, ' ')}
                 </Badge>
                 {project.health_status && (
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${healthColors[project.health_status]}`} />
                     <span className="text-sm text-slate-600">
-                      {project.overall_status?.replace(/_/g, ' ')}
+                      {(project.overall_status || '').replace(/_/g, ' ')}
                     </span>
                   </div>
                 )}
@@ -188,7 +197,7 @@ export default function ProjectDetail() {
             </div>
 
             {partner && (
-              <div className="lg:min-w-[280px]">
+              <div className="lg:min-w-[280px] space-y-4">
                 <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
                   <CardContent className="pt-6">
                     <div className="text-center mb-4">
@@ -211,6 +220,17 @@ export default function ProjectDetail() {
                         </div>
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-slate-200">
+                  <CardContent className="pt-6">
+                    <div className="text-sm font-semibold text-slate-700 mb-3">Coverage Match</div>
+                    <ServiceCoverageMatch 
+                      partner={partner} 
+                      project={project}
+                      serviceCoverageOptions={serviceCoverageOptions}
+                    />
                   </CardContent>
                 </Card>
               </div>
@@ -237,11 +257,11 @@ export default function ProjectDetail() {
               <CardContent className="space-y-4">
                 <div>
                   <div className="text-sm font-semibold text-slate-700 mb-1">Project Type</div>
-                  <div className="text-slate-900">{project.project_type?.replace(/_/g, ' ')}</div>
+                  <div className="text-slate-900">{(project.project_type || 'new_installation').replace(/_/g, ' ')}</div>
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-slate-700 mb-1">Source</div>
-                  <div className="text-slate-900">{project.source?.replace(/_/g, ' ')}</div>
+                  <div className="text-slate-900">{(project.source || 'direct_assignment').replace(/_/g, ' ')}</div>
                 </div>
                 {project.customer_contact && (
                   <div>

@@ -21,7 +21,9 @@ export default function CreateTender() {
     tender_code: '',
     vertical_id: '',
     required_solutions: [],
-    product_groups: [],
+    assa_abloy_products: [],
+    project_language: 'nl',
+    required_service_coverage: [],
     budget_min: 0,
     budget_max: 0,
     estimated_gross_value: 0,
@@ -46,17 +48,25 @@ export default function CreateTender() {
     queryFn: () => base44.entities.Vertical.list(),
   });
 
-  const { data: productGroups = [] } = useQuery({
-    queryKey: ['productGroups'],
+  const { data: assaAbloyProducts = [] } = useQuery({
+    queryKey: ['assaAbloyProducts'],
     queryFn: async () => {
       const values = await base44.entities.DropdownValue.list();
-      return values.filter(v => v.category === 'product_group' && v.active);
+      return values.filter(v => v.category === 'assa_abloy_products' && v.active);
     },
   });
 
   const { data: partners = [] } = useQuery({
     queryKey: ['partners'],
     queryFn: () => base44.entities.Partner.list(),
+  });
+
+  const { data: serviceCoverageOptions = [] } = useQuery({
+    queryKey: ['serviceCoverageOptions'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'service_region_language' && v.active);
+    },
   });
 
   const createMutation = useMutation({
@@ -275,16 +285,16 @@ export default function CreateTender() {
             </div>
 
             <div>
-              <Label>ASSA ABLOY Product Groups *</Label>
+              <Label>ASSA ABLOY Products *</Label>
               <div className="flex flex-wrap gap-2 mt-2 p-3 border rounded-lg">
-                {productGroups.map(pg => (
-                  <label key={pg.id} className="flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer hover:bg-slate-50">
+                {assaAbloyProducts.map(product => (
+                  <label key={product.id} className="flex items-center gap-2 px-3 py-1.5 border rounded-lg cursor-pointer hover:bg-slate-50">
                     <input
                       type="checkbox"
-                      checked={formData.product_groups?.includes(pg.value)}
-                      onChange={() => toggleArrayItem('product_groups', pg.value)}
+                      checked={formData.assa_abloy_products?.includes(product.value)}
+                      onChange={() => toggleArrayItem('assa_abloy_products', product.value)}
                     />
-                    <span className="text-sm">{pg.label}</span>
+                    <span className="text-sm">{product.label}</span>
                   </label>
                 ))}
               </div>
@@ -327,6 +337,48 @@ export default function CreateTender() {
                   onChange={(e) => updateField('budget_max', e.target.value)}
                   placeholder="60000"
                 />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Service Coverage & Language */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Service Coverage & Language</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Project Language *</Label>
+              <Select value={formData.project_language} onValueChange={(val) => updateField('project_language', val)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nl">Dutch (NL)</SelectItem>
+                  <SelectItem value="fr">French (FR)</SelectItem>
+                  <SelectItem value="en">English (EN)</SelectItem>
+                  <SelectItem value="bilingual">Bilingual (NL/FR)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Required Service Coverage</Label>
+              <p className="text-xs text-slate-500 mb-2">Select regional and language requirements</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
+                {serviceCoverageOptions.map(option => (
+                  <label key={option.id} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-white bg-white">
+                    <input
+                      type="checkbox"
+                      checked={formData.required_service_coverage?.includes(option.value)}
+                      onChange={() => toggleArrayItem('required_service_coverage', option.value)}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm text-slate-900">{option.label}</div>
+                      <div className="text-xs text-slate-500">{option.description}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
           </CardContent>

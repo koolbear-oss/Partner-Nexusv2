@@ -7,18 +7,29 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, Calendar, MapPin, DollarSign, FileText, 
-  Users, CheckCircle2, XCircle, Clock, Trophy 
+  Users, CheckCircle2, XCircle, Clock, Trophy, Send, AlertCircle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { useCurrentUser } from '../components/hooks/useCurrentUser';
 import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import TenderQA from '../components/tenders/TenderQA';
 
 export default function TenderDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const tenderId = urlParams.get('id');
   const { isAdmin, partnerId } = useCurrentUser();
   const queryClient = useQueryClient();
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
 
   const { data: tender, isLoading } = useQuery({
     queryKey: ['tender', tenderId],
@@ -43,6 +54,22 @@ export default function TenderDetail() {
     queryKey: ['verticals'],
     queryFn: () => base44.entities.Vertical.list(),
   });
+
+  const publishTenderMutation = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.Tender.update(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['tender', tenderId]);
+      queryClient.invalidateQueries(['tenders']);
+      setShowPublishDialog(false);
+    },
+  });
+
+  const handlePublish = () => {
+    publishTenderMutation.mutate({ 
+      id: tenderId, 
+      status: 'published'
+    });
+  };
 
   if (isLoading || !tender) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
@@ -77,12 +104,23 @@ export default function TenderDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to={createPageUrl('Tenders')}>
-        <button className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Tenders</span>
-        </button>
-      </Link>
+      <div className="flex justify-between items-center">
+        <Link to={createPageUrl('Tenders')}>
+          <button className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Tenders</span>
+          </button>
+        </Link>
+        {isAdmin && tender.status === 'draft' && (
+          <Button 
+            onClick={() => setShowPublishDialog(true)}
+            className="bg-green-600 hover:bg-green-700 gap-2"
+          >
+            <Send className="w-4 h-4" />
+            Publish Tender
+          </Button>
+        )}
+      </div>
 
       {/* Header */}
       <Card className="shadow-md border-t-4 border-t-blue-600">
@@ -194,6 +232,7 @@ export default function TenderDetail() {
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           {isAdmin && <TabsTrigger value="responses">Responses</TabsTrigger>}
+          {isAdmin && tender.status !== 'draft' && <TabsTrigger value="visibility">Visibility</TabsTrigger>}
           <TabsTrigger value="questions">Q&A</TabsTrigger>
         </TabsList>
 
@@ -325,52 +364,195 @@ export default function TenderDetail() {
           </TabsContent>
         )}
 
-        <TabsContent value="questions">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Questions & Answers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tender.questions && tender.questions.length > 0 ? (
-                <div className="space-y-4">
-                  {tender.questions.map((qa, idx) => (
-                    <div key={idx} className="p-4 bg-slate-50 rounded-lg">
-                      <div className="mb-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-semibold text-blue-900">Question</span>
-                          <span className="text-xs text-slate-500">
-                            {format(new Date(qa.asked_at), 'MMM d, yyyy')}
-                          </span>
-                        </div>
-                        <p className="text-slate-700">{qa.question}</p>
-                      </div>
-                      {qa.answer && (
-                        <div className="pl-6 border-l-2 border-green-300">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-semibold text-green-900">Answer</span>
-                            {qa.answered_at && (
-                              <span className="text-xs text-slate-500">
-                                {format(new Date(qa.answered_at), 'MMM d, yyyy')}
-                              </span>
-                            )}
+        {isAdmin && tender.status !== 'draft' && (
+          <TabsContent value="visibility">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Partner Visibility</CardTitle>
+                <p className="text-sm text-slate-600 mt-1">
+                  Partners who can see and respond to this tender based on the invitation strategy
+                </p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  let eligiblePartners = [];
+                  
+                  if (tender.invitation_strategy === 'open') {
+                    eligiblePartners = partners.filter(p => p.status === 'active');
+                  } else if (tender.invitation_strategy === 'invited_only') {
+                    eligiblePartners = partners.filter(p => 
+                      tender.invited_partners?.includes(p.id)
+                    );
+                  } else if (tender.invitation_strategy === 'qualified_only') {
+                    eligiblePartners = partners.filter(p => {
+                      if (p.status !== 'active') return false;
+                      
+                      // Check vertical match
+                      const tenderVertical = verticals.find(v => v.id === tender.vertical_id);
+                      const hasVertical = tenderVertical ? p.verticals?.includes(tenderVertical.code) : false;
+                      
+                      // Check solution match - tender.required_solutions contains solution IDs
+                      const hasSolutions = tender.required_solutions?.some(solId => {
+                        const solution = solutions.find(s => s.id === solId);
+                        return solution && p.solutions?.includes(solution.code);
+                      });
+                      
+                      // For open strategy, we only require active status
+                      // For qualified, we need both vertical and solutions
+                      return hasVertical && hasSolutions;
+                    });
+                  } else {
+                    // If strategy is 'open' or unrecognized, show all active partners
+                    eligiblePartners = partners.filter(p => p.status === 'active');
+                  }
+
+                  return eligiblePartners.length > 0 ? (
+                    <div className="space-y-3">
+                      {eligiblePartners.map(partner => (
+                        <div key={partner.id} className="p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-bold text-slate-900">{partner.company_name}</div>
+                              <div className="text-sm text-slate-600 mt-1">
+                                Tier: <Badge className="ml-1">{partner.tier}</Badge>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs text-slate-500">Contact</div>
+                              <div className="text-sm text-slate-700">{partner.primary_contact?.email || partner.contact_email}</div>
+                            </div>
                           </div>
-                          <p className="text-slate-700">{qa.answer}</p>
+                        </div>
+                      ))}
+                      <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="text-sm font-semibold text-blue-900">
+                          Total: {eligiblePartners.length} partner(s) can see this tender
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-slate-500 mb-2">No partners match the visibility criteria</div>
+                      <div className="text-sm text-slate-400">
+                        {tender.invitation_strategy === 'invited_only' && 'No partners have been invited'}
+                        {tender.invitation_strategy === 'qualified_only' && 'No partners meet the required qualifications'}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        <TabsContent value="questions">
+          <TenderQA tender={tender} tenderId={tenderId} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Publish Dialog */}
+      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Publish Tender</DialogTitle>
+            <DialogDescription>
+              Review the visibility settings before publishing this tender to partners.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <Card className="border-l-4 border-l-blue-600">
+              <CardContent className="pt-4">
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-700 mb-1">Invitation Strategy</div>
+                    <Badge className="text-sm">
+                      {tender.invitation_strategy?.replace(/_/g, ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+                  
+                  {tender.invitation_strategy === 'open' && (
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-900">
+                        <strong>Open to all partners:</strong> All partners in your network will be able to see and respond to this tender.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {tender.invitation_strategy === 'invited_only' && (
+                    <Alert className="bg-purple-50 border-purple-200">
+                      <Users className="h-4 w-4 text-purple-600" />
+                      <AlertDescription className="text-purple-900">
+                        <strong>Invited partners only:</strong> Only {tender.invited_partners?.length || 0} specifically invited partner(s) will see this tender.
+                        {(!tender.invited_partners || tender.invited_partners.length === 0) && (
+                          <div className="mt-2 text-red-700 font-semibold">
+                            ⚠️ Warning: No partners have been invited yet!
+                          </div>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {tender.invitation_strategy === 'qualified_only' && (
+                    <Alert className="bg-amber-50 border-amber-200">
+                      <CheckCircle2 className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-900">
+                        <strong>Qualified partners only:</strong> Partners matching the required solutions, verticals, and service coverage will see this tender.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="pt-3 border-t">
+                    <div className="text-sm font-semibold text-slate-700 mb-2">Required Qualifications</div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-slate-600">Vertical:</span>
+                        <Badge variant="outline">{getVerticalName(tender.vertical_id)}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-slate-600">Solutions:</span>
+                        {tender.required_solutions?.map(solId => (
+                          <Badge key={solId} variant="outline">{getSolutionName(solId)}</Badge>
+                        ))}
+                      </div>
+                      {tender.required_service_coverage && tender.required_service_coverage.length > 0 && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-slate-600">Service Coverage:</span>
+                          <span className="text-slate-800">{tender.required_service_coverage.length} region(s)</span>
                         </div>
                       )}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  No questions yet
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+
+            {tender.invitation_strategy === 'invited_only' && (!tender.invited_partners || tender.invited_partners.length === 0) && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  This tender is set to "invited only" but no partners have been invited. 
+                  Consider adding invited partners or changing the invitation strategy before publishing.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPublishDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePublish}
+              disabled={publishTenderMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {publishTenderMutation.isPending ? 'Publishing...' : 'Publish Tender'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

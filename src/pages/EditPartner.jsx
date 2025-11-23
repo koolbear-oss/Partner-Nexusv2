@@ -44,11 +44,27 @@ export default function EditPartner() {
     queryFn: () => base44.entities.Vertical.list(),
   });
 
-  const { data: productGroups = [] } = useQuery({
-    queryKey: ['productGroups'],
+  const { data: assaAbloyProducts = [] } = useQuery({
+    queryKey: ['assaAbloyProducts'],
     queryFn: async () => {
       const values = await base44.entities.DropdownValue.list();
-      return values.filter(v => v.category === 'product_group' && v.active);
+      return values.filter(v => v.category === 'assa_abloy_products' && v.active);
+    },
+  });
+
+  const { data: partnerTypes = [] } = useQuery({
+    queryKey: ['dropdownValues', 'partner_type'],
+    queryFn: async () => {
+      const all = await base44.entities.DropdownValue.list();
+      return all.filter(d => d.category === 'partner_type' && d.active).sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    },
+  });
+
+  const { data: serviceCoverageOptions = [] } = useQuery({
+    queryKey: ['serviceCoverageOptions'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'service_region_language' && v.active);
     },
   });
 
@@ -150,13 +166,11 @@ export default function EditPartner() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="installer">Installer</SelectItem>
-                    <SelectItem value="integrator">Integrator</SelectItem>
-                    <SelectItem value="consultant">Consultant</SelectItem>
-                    <SelectItem value="reseller">Reseller</SelectItem>
-                    <SelectItem value="distributor">Distributor</SelectItem>
-                    <SelectItem value="service_provider">Service Provider</SelectItem>
-                    <SelectItem value="technology_partner">Technology Partner</SelectItem>
+                    {partnerTypes.map(type => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -185,7 +199,7 @@ export default function EditPartner() {
                       formData.tier === 'bronze' ? 'bg-orange-100 text-orange-800 border-orange-300' :
                       'bg-gray-100 text-gray-800 border-gray-300'
                     }`}>
-                      {formData.tier?.toUpperCase() || 'ENTRY'}
+                      {(formData.tier || 'entry').toUpperCase()}
                     </Badge>
                     <div className="text-right">
                       <div className="text-sm font-semibold text-slate-900">Score: {formData.tier_score || 0}</div>
@@ -255,6 +269,59 @@ export default function EditPartner() {
               </div>
             </div>
 
+            {/* Service Coverage */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Service Area & Language Capabilities</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label>Service Coverage</Label>
+                  <p className="text-xs text-slate-500 mb-2">Select which regions and languages this partner can support</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    {serviceCoverageOptions.map(option => (
+                      <label key={option.id} className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-white bg-white">
+                        <input
+                          type="checkbox"
+                          checked={formData.service_coverage?.includes(option.value)}
+                          onChange={(e) => {
+                            const current = formData.service_coverage || [];
+                            const updated = e.target.checked
+                              ? [...current, option.value]
+                              : current.filter(v => v !== option.value);
+                            setFormData({ ...formData, service_coverage: updated });
+                          }}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm text-slate-900">{option.label}</div>
+                          <div className="text-xs text-slate-500">{option.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label>Preferred Languages</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {['nl', 'fr', 'en'].map(lang => (
+                      <label key={lang} className="flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer hover:bg-slate-50">
+                        <input
+                          type="checkbox"
+                          checked={formData.language_preferences?.includes(lang)}
+                          onChange={(e) => {
+                            const current = formData.language_preferences || [];
+                            const updated = e.target.checked
+                              ? [...current, lang]
+                              : current.filter(l => l !== lang);
+                            setFormData({ ...formData, language_preferences: updated });
+                          }}
+                        />
+                        <span className="text-sm font-medium">{lang.toUpperCase()}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Solutions & Verticals */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4">Solutions & Markets</h3>
@@ -302,23 +369,23 @@ export default function EditPartner() {
                   </div>
                 </div>
                 <div>
-                  <Label>ASSA ABLOY Product Groups</Label>
-                  <p className="text-xs text-slate-500 mb-2">Select product groups this partner is authorized to sell</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {productGroups.map(pg => (
-                      <label key={pg.id} className="flex items-center gap-2 px-3 py-1 border rounded-lg cursor-pointer hover:bg-slate-50">
+                  <Label>Authorized ASSA ABLOY Products</Label>
+                  <p className="text-xs text-slate-500 mb-2">Select which ASSA ABLOY products this partner is authorized to sell (used in discount matrix)</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    {assaAbloyProducts.map(product => (
+                      <label key={product.id} className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={formData.product_groups?.includes(pg.value)}
+                          checked={formData.assa_abloy_products?.includes(product.value)}
                           onChange={(e) => {
-                            const current = formData.product_groups || [];
+                            const current = formData.assa_abloy_products || [];
                             const updated = e.target.checked
-                              ? [...current, pg.value]
-                              : current.filter(v => v !== pg.value);
-                            setFormData({ ...formData, product_groups: updated });
+                              ? [...current, product.value]
+                              : current.filter(v => v !== product.value);
+                            setFormData({ ...formData, assa_abloy_products: updated });
                           }}
                         />
-                        <span className="text-sm">{pg.label}</span>
+                        <span className="text-sm">{product.label}</span>
                       </label>
                     ))}
                   </div>

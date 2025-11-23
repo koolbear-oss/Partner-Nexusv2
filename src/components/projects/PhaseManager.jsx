@@ -94,7 +94,7 @@ export default function PhaseManager({ project, canEdit }) {
             <div>
               <div className="text-sm text-slate-500">Current Phase</div>
               <div className="text-xl font-bold text-slate-900 capitalize">
-                {project.current_phase.replace(/_/g, ' ')}
+                {(project.current_phase || 'planning').replace(/_/g, ' ')}
               </div>
             </div>
           </div>
@@ -118,7 +118,7 @@ export default function PhaseManager({ project, canEdit }) {
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
                   <div>
                     <div className="font-medium text-slate-900 capitalize">
-                      {phase.phase.replace(/_/g, ' ')}
+                      {(phase.phase || 'unknown').replace(/_/g, ' ')}
                     </div>
                     <div className="text-xs text-slate-500">
                       {format(new Date(phase.started), 'MMM d, yyyy')} - {format(new Date(phase.completed), 'MMM d, yyyy')}

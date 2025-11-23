@@ -89,10 +89,22 @@ export default function Bonuses() {
         </h1>
         <p className="text-slate-600 mt-2">
           {isAdmin 
-            ? `Review and approve quarterly bonus calculations for ${bonuses.length} partners` 
-            : `Track your earned bonuses and performance incentives from ASSA ABLOY`
+            ? `Review and approve automated quarterly bonus calculations based on revenue, projects, training, and data quality` 
+            : `Track your earned bonuses based on revenue, project registration, product diversity, and training compliance`
           }
         </p>
+        {!isAdmin && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-900 font-semibold mb-2">💡 Maximize Your Bonuses</p>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• <strong>Register all projects</strong> - If it's not logged, it doesn't exist!</li>
+              <li>• <strong>Use diverse ASSA ABLOY products</strong> - Product diversity increases your score</li>
+              <li>• <strong>Complete training sessions</strong> - Training compliance boosts your bonus</li>
+              <li>• <strong>Provide accurate forecasts</strong> - Better accuracy = better bonuses</li>
+              <li>• <strong>Quality data matters</strong> - Complete project details improve your data quality score</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -229,60 +241,107 @@ export default function Bonuses() {
                     </div>
                   </div>
 
-                  <div className="ml-13 grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-slate-500">Revenue</p>
-                      <p className="font-bold text-slate-900">€{(bonus.revenue / 1000).toFixed(0)}K</p>
+                  <div className="ml-13 space-y-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-500">Revenue</p>
+                        <p className="font-bold text-slate-900">€{((bonus.revenue_achieved || bonus.revenue) / 1000).toFixed(0)}K</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Projects Registered</p>
+                        <p className="font-bold text-slate-900">{bonus.projects_registered_count || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Products Used</p>
+                        <p className="font-bold text-slate-900">{bonus.assa_abloy_products_count || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Trainings</p>
+                        <p className="font-bold text-slate-900">{bonus.trainings_completed_count || 0}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-slate-500">Projects</p>
-                      <p className="font-bold text-slate-900">{bonus.projects_completed}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500">Avg Rating</p>
-                      <p className="font-bold text-slate-900">{bonus.avg_project_rating?.toFixed(1) || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-500">Tier Score</p>
-                      <p className="font-bold text-slate-900">{bonus.tier_score}</p>
-                    </div>
+                    
+                    {bonus.weighted_total_score && (
+                      <div className="bg-slate-50 rounded p-3 border border-slate-200">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-semibold text-slate-700">Performance Score</span>
+                          <span className="text-lg font-bold text-slate-900">{bonus.weighted_total_score.toFixed(1)}/100</span>
+                        </div>
+                        <div className="space-y-1 text-xs">
+                          {bonus.revenue_score > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Revenue: {bonus.revenue_score.toFixed(0)}/100</span>
+                              <span className="text-slate-500">({bonus.scoring_weights?.revenue_weight || 40}%)</span>
+                            </div>
+                          )}
+                          {bonus.projects_registered_score > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Projects: {bonus.projects_registered_score.toFixed(0)}/100</span>
+                              <span className="text-slate-500">({bonus.scoring_weights?.projects_registered_weight || 15}%)</span>
+                            </div>
+                          )}
+                          {bonus.product_diversity_score > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Products: {bonus.product_diversity_score.toFixed(0)}/100</span>
+                              <span className="text-slate-500">({bonus.scoring_weights?.product_diversity_weight || 10}%)</span>
+                            </div>
+                          )}
+                          {bonus.training_compliance_score > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Training: {bonus.training_compliance_score.toFixed(0)}/100</span>
+                              <span className="text-slate-500">({bonus.scoring_weights?.training_weight || 10}%)</span>
+                            </div>
+                          )}
+                          {bonus.data_quality_score > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Data Quality: {bonus.data_quality_score.toFixed(0)}/100</span>
+                              <span className="text-slate-500">({bonus.scoring_weights?.data_quality_weight || 10}%)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {bonus.data_quality_issues && bonus.data_quality_issues.length > 0 && (
+                      <div className="bg-amber-50 rounded p-3 border border-amber-200">
+                        <p className="text-xs font-semibold text-amber-900 mb-1">⚠️ Data Quality Issues:</p>
+                        <ul className="text-xs text-amber-800 space-y-0.5">
+                          {bonus.data_quality_issues.map((issue, idx) => (
+                            <li key={idx}>• {issue}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="lg:min-w-[280px] space-y-3">
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
-                  <p className="text-xs text-green-700 mb-2 text-center font-semibold">Total Bonus</p>
+                  <p className="text-xs text-green-700 mb-2 text-center font-semibold">Calculated Bonus</p>
                   <p className="text-3xl font-bold text-green-900 text-center mb-3">
-                    €{(bonus.total_bonus || bonus.bonus_amount)?.toLocaleString() || 0}
+                    €{(bonus.calculated_bonus_amount || bonus.total_bonus || bonus.bonus_amount)?.toLocaleString() || 0}
                   </p>
                   {bonus.bonus_breakdown && (
                     <div className="space-y-1 text-xs border-t border-green-200 pt-2">
-                      {bonus.bonus_breakdown.revenue_bonus > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-green-700">Revenue:</span>
-                          <span className="font-semibold text-green-900">€{bonus.bonus_breakdown.revenue_bonus.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {bonus.bonus_breakdown.quality_bonus > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-green-700">Quality:</span>
-                          <span className="font-semibold text-green-900">€{bonus.bonus_breakdown.quality_bonus.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {bonus.bonus_breakdown.growth_bonus > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-green-700">Growth:</span>
-                          <span className="font-semibold text-green-900">€{bonus.bonus_breakdown.growth_bonus.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {bonus.bonus_breakdown.certification_bonus > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-green-700">Certification:</span>
-                          <span className="font-semibold text-green-900">€{bonus.bonus_breakdown.certification_bonus.toLocaleString()}</span>
-                        </div>
-                      )}
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Base ({bonus.base_bonus_rate || 2}% of revenue):</span>
+                        <span className="font-semibold text-green-900">€{(bonus.bonus_breakdown.base_amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Multiplier:</span>
+                        <span className="font-semibold text-green-900">{(bonus.performance_multiplier || 1).toFixed(2)}x</span>
+                      </div>
+                      <div className="flex justify-between font-bold border-t border-green-200 pt-1 mt-1">
+                        <span className="text-green-800">Final Amount:</span>
+                        <span className="text-green-900">€{(bonus.bonus_breakdown.final_amount || 0).toLocaleString()}</span>
+                      </div>
                     </div>
                   )}
+                  <div className="mt-3 pt-3 border-t border-green-200 text-center">
+                    <p className="text-xs text-green-700 italic">
+                      Formula: (Revenue × {bonus.base_bonus_rate || 2}%) × Multiplier
+                    </p>
+                  </div>
                 </div>
                 {bonus.payment_status === 'paid' && bonus.paid_date && (
                   <p className="text-xs text-center text-slate-600">

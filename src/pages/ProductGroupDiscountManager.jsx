@@ -12,11 +12,11 @@ export default function ProductGroupDiscountManager() {
   const [discountMatrix, setDiscountMatrix] = useState({});
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: productGroups = [], isLoading: loadingPG } = useQuery({
-    queryKey: ['productGroups'],
+  const { data: assaAbloyProducts = [], isLoading: loadingPG } = useQuery({
+    queryKey: ['assaAbloyProducts'],
     queryFn: async () => {
       const values = await base44.entities.DropdownValue.list();
-      return values.filter(v => v.category === 'product_group' && v.active);
+      return values.filter(v => v.category === 'assa_abloy_products' && v.active);
     },
   });
 
@@ -34,7 +34,8 @@ export default function ProductGroupDiscountManager() {
     onSuccess: (data) => {
       const matrix = {};
       data.forEach(discount => {
-        const key = `${discount.partner_type}-${discount.product_group_value}`;
+        const productKey = discount.assa_abloy_product || discount.product_group_value;
+        const key = `${discount.partner_type}-${productKey}`;
         matrix[key] = {
           id: discount.id,
           percentage: discount.base_discount_percentage,
@@ -54,7 +55,7 @@ export default function ProductGroupDiscountManager() {
         } else {
           return base44.entities.ProductGroupDiscount.create({
             partner_type: update.partner_type,
-            product_group_value: update.product_group_value,
+            assa_abloy_product: update.assa_abloy_product,
             base_discount_percentage: update.percentage,
             effective_date: new Date().toISOString().split('T')[0],
           });
@@ -68,8 +69,8 @@ export default function ProductGroupDiscountManager() {
     },
   });
 
-  const handleDiscountChange = (partnerType, productGroupValue, value) => {
-    const key = `${partnerType}-${productGroupValue}`;
+  const handleDiscountChange = (partnerType, assaAbloyProduct, value) => {
+    const key = `${partnerType}-${assaAbloyProduct}`;
     const percentage = parseFloat(value) || 0;
     
     setDiscountMatrix(prev => ({
@@ -86,11 +87,11 @@ export default function ProductGroupDiscountManager() {
     const updates = [];
     Object.entries(discountMatrix).forEach(([key, data]) => {
       if (data.percentage > 0) {
-        const [partner_type, product_group_value] = key.split('-');
+        const [partner_type, assa_abloy_product] = key.split('-');
         updates.push({
           id: data.id,
           partner_type,
-          product_group_value,
+          assa_abloy_product,
           percentage: data.percentage,
         });
       }
@@ -107,10 +108,10 @@ export default function ProductGroupDiscountManager() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Product Group Discount Matrix
+            ASSA ABLOY Product Discount Matrix
           </h1>
           <p className="text-slate-600 mt-2">
-            Manage base discount percentages for each Partner Type and Product Group combination
+            Manage base discount percentages for each Partner Type and ASSA ABLOY Product combination
           </p>
         </div>
         <div className="flex gap-2">
@@ -156,7 +157,7 @@ export default function ProductGroupDiscountManager() {
               <thead>
                 <tr className="border-b-2 border-slate-200">
                   <th className="text-left p-3 font-semibold text-slate-700 bg-slate-50 sticky left-0 z-10">
-                    Product Group / Partner Type
+                    ASSA ABLOY Product / Partner Type
                   </th>
                   {partnerTypes.map(pt => (
                     <th key={pt.id} className="text-center p-3 font-semibold text-slate-700 bg-slate-50 min-w-[120px]">
@@ -166,13 +167,13 @@ export default function ProductGroupDiscountManager() {
                 </tr>
               </thead>
               <tbody>
-                {productGroups.map(pg => (
-                  <tr key={pg.id} className="border-b border-slate-100 hover:bg-slate-50">
+                {assaAbloyProducts.map(product => (
+                  <tr key={product.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="p-3 font-medium text-slate-900 bg-white sticky left-0 z-10 border-r border-slate-200">
-                      {pg.label}
+                      {product.label}
                     </td>
                     {partnerTypes.map(pt => {
-                      const key = `${pt.value}-${pg.value}`;
+                      const key = `${pt.value}-${product.value}`;
                       const currentValue = discountMatrix[key]?.percentage || 0;
                       return (
                         <td key={pt.id} className="p-2 text-center">
@@ -183,7 +184,7 @@ export default function ProductGroupDiscountManager() {
                               max="100"
                               step="0.5"
                               value={currentValue}
-                              onChange={(e) => handleDiscountChange(pt.value, pg.value, e.target.value)}
+                              onChange={(e) => handleDiscountChange(pt.value, product.value, e.target.value)}
                               className="w-24 text-center"
                             />
                             <span className="absolute right-2 text-slate-400 pointer-events-none">%</span>
@@ -200,7 +201,7 @@ export default function ProductGroupDiscountManager() {
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="font-semibold text-blue-900 mb-2">How to use this matrix:</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Each cell represents the base discount for a specific Partner Type and Product Group.</li>
+              <li>• Each cell represents the base discount for a specific Partner Type and ASSA ABLOY Product.</li>
               <li>• Enter discount percentages (0-100%). Leave at 0 if no discount applies.</li>
               <li>• These base discounts will be used in future quotation and pricing calculations.</li>
               <li>• Additional project-specific discounts can be managed separately in the Extra Discount Rules.</li>

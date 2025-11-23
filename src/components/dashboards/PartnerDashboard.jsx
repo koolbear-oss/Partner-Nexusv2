@@ -96,8 +96,8 @@ export default function PartnerDashboard() {
       <div>
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{partner.company_name}</h1>
-          <Badge className={`${tierColors[partner.tier]} border text-sm font-bold px-3 py-1`}>
-            {partner.tier.toUpperCase()}
+          <Badge className={`${tierColors[partner.tier || 'entry']} border text-sm font-bold px-3 py-1`}>
+            {(partner.tier || 'entry').toUpperCase()}
           </Badge>
         </div>
         <p className="text-slate-600">Welcome back, {user?.full_name}</p>
@@ -212,8 +212,8 @@ export default function PartnerDashboard() {
                     <div className="p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
                       <div className="flex items-start justify-between mb-2">
                         <div className="font-semibold text-slate-900 text-sm">{project.project_name}</div>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[project.status]}`}>
-                          {project.status.replace(/_/g, ' ')}
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[project.status] || 'bg-slate-100 text-slate-800'}`}>
+                          {(project.status || 'assigned').replace(/_/g, ' ')}
                         </span>
                       </div>
                       <div className="text-xs text-slate-600">{project.client_name}</div>

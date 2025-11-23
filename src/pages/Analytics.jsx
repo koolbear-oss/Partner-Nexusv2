@@ -42,6 +42,14 @@ export default function Analytics() {
     queryFn: () => base44.entities.TierScore.list('-calculation_date', 50),
   });
 
+  const { data: serviceCoverageOptions = [] } = useQuery({
+    queryKey: ['serviceCoverageOptions'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'service_region_language' && v.active);
+    },
+  });
+
   // Partner Tier Distribution
   const tierData = [
     { name: 'Platinum', value: partners.filter(p => p.tier === 'platinum').length, color: '#9333ea' },
@@ -126,6 +134,7 @@ export default function Analytics() {
           <TabsTrigger value="partners">Partner Analytics</TabsTrigger>
           <TabsTrigger value="projects">Project Analytics</TabsTrigger>
           <TabsTrigger value="performance">Performance Trends</TabsTrigger>
+          <TabsTrigger value="coverage">Regional Coverage</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -395,34 +404,284 @@ export default function Analytics() {
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-6">
+          {/* Top Performers by Revenue */}
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg">Top 5 Partners by Tier Score</CardTitle>
+              <CardTitle className="text-lg">Top 10 Partners by Revenue</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {topPartners.map((partner, idx) => (
-                  <div key={partner.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                        idx === 0 ? 'bg-yellow-400 text-yellow-900' :
-                        idx === 1 ? 'bg-slate-300 text-slate-700' :
-                        idx === 2 ? 'bg-orange-400 text-orange-900' :
-                        'bg-slate-200 text-slate-600'
-                      }`}>
-                        #{idx + 1}
+                {[...partners]
+                  .filter(p => p.status === 'active')
+                  .sort((a, b) => (b.quarterly_revenue || 0) - (a.quarterly_revenue || 0))
+                  .slice(0, 10)
+                  .map((partner, idx) => (
+                    <div key={partner.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                          idx === 0 ? 'bg-yellow-400 text-yellow-900' :
+                          idx === 1 ? 'bg-slate-300 text-slate-700' :
+                          idx === 2 ? 'bg-orange-400 text-orange-900' :
+                          'bg-slate-200 text-slate-600'
+                        }`}>
+                          #{idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-slate-900">{partner.company_name}</div>
+                          <div className="text-xs text-slate-500">{partner.tier} tier • {partner.partner_type.replace(/_/g, ' ')}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-slate-900">{partner.company_name}</div>
-                        <div className="text-xs text-slate-500">{partner.tier} tier</div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-green-700">€{((partner.quarterly_revenue || 0) / 1000).toFixed(0)}K</div>
+                        <div className="text-xs text-slate-500">quarterly</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-slate-900">{partner.tier_score}</div>
-                      <div className="text-xs text-slate-500">score</div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Performers by Vertical */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Top Performers by Vertical Market</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {verticals.slice(0, 5).map(vertical => {
+                  const verticalPartners = partners
+                    .filter(p => p.verticals?.includes(vertical.code) || p.verticals?.includes(vertical.id))
+                    .filter(p => p.status === 'active')
+                    .map(p => {
+                      const verticalProjects = projects.filter(pr => 
+                        (pr.vertical_id === vertical.code || pr.vertical_id === vertical.id) && 
+                        pr.assigned_partner_id === p.id &&
+                        pr.status === 'completed'
+                      );
+                      return {
+                        ...p,
+                        verticalRevenue: verticalProjects.reduce((sum, pr) => sum + (pr.final_value || 0), 0),
+                        verticalProjects: verticalProjects.length
+                      };
+                    })
+                    .filter(p => p.verticalRevenue > 0)
+                    .sort((a, b) => b.verticalRevenue - a.verticalRevenue)
+                    .slice(0, 3);
+
+                  return (
+                    <div key={vertical.id} className="border-l-4 border-l-blue-500 pl-4">
+                      <h3 className="font-bold text-slate-900 mb-3">{vertical.name}</h3>
+                      {verticalPartners.length > 0 ? (
+                        <div className="space-y-2">
+                          {verticalPartners.map((partner, idx) => (
+                            <div key={partner.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-slate-200 text-slate-700">#{idx + 1}</Badge>
+                                <div>
+                                  <div className="font-medium text-sm text-slate-900">{partner.company_name}</div>
+                                  <div className="text-xs text-slate-500">{partner.verticalProjects} projects</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-green-700">€{(partner.verticalRevenue / 1000).toFixed(0)}K</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-slate-500">No completed projects yet</div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Performers by Solution */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Top Performers by Solution Type</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {solutions.slice(0, 5).map(solution => {
+                  const solutionPartners = partners
+                    .filter(p => p.solutions?.includes(solution.code) || p.solutions?.includes(solution.id))
+                    .filter(p => p.status === 'active')
+                    .map(p => {
+                      const solutionProjects = projects.filter(pr => 
+                        (pr.solution_ids?.includes(solution.code) || 
+                         pr.solution_ids?.includes(solution.id) ||
+                         pr.primary_solution === solution.code ||
+                         pr.primary_solution === solution.id) && 
+                        pr.assigned_partner_id === p.id &&
+                        pr.status === 'completed'
+                      );
+                      return {
+                        ...p,
+                        solutionRevenue: solutionProjects.reduce((sum, pr) => sum + (pr.final_value || 0), 0),
+                        solutionProjects: solutionProjects.length
+                      };
+                    })
+                    .filter(p => p.solutionRevenue > 0)
+                    .sort((a, b) => b.solutionRevenue - a.solutionRevenue)
+                    .slice(0, 3);
+
+                  return (
+                    <div key={solution.id} className="border-l-4 border-l-purple-500 pl-4">
+                      <h3 className="font-bold text-slate-900 mb-3">{solution.name}</h3>
+                      {solutionPartners.length > 0 ? (
+                        <div className="space-y-2">
+                          {solutionPartners.map((partner, idx) => (
+                            <div key={partner.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-slate-200 text-slate-700">#{idx + 1}</Badge>
+                                <div>
+                                  <div className="font-medium text-sm text-slate-900">{partner.company_name}</div>
+                                  <div className="text-xs text-slate-500">{partner.solutionProjects} projects</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-green-700">€{(partner.solutionRevenue / 1000).toFixed(0)}K</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-slate-500">No completed projects yet</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Performers by Tier Score */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Top 10 Partners by Tier Score</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[...partners]
+                  .filter(p => p.status === 'active')
+                  .sort((a, b) => (b.tier_score || 0) - (a.tier_score || 0))
+                  .slice(0, 10)
+                  .map((partner, idx) => (
+                    <div key={partner.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                          idx === 0 ? 'bg-yellow-400 text-yellow-900' :
+                          idx === 1 ? 'bg-slate-300 text-slate-700' :
+                          idx === 2 ? 'bg-orange-400 text-orange-900' :
+                          'bg-slate-200 text-slate-600'
+                        }`}>
+                          #{idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-slate-900">{partner.company_name}</div>
+                          <div className="text-xs text-slate-500">{partner.tier} tier • {partner.projects_completed || 0} projects</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-slate-900">{partner.tier_score || 0}</div>
+                        <div className="text-xs text-slate-500">score</div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="coverage" className="space-y-6">
+          {/* Top Performers by Service Coverage */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Top Performers by Regional Coverage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {serviceCoverageOptions.map(coverage => {
+                  const coveragePartners = partners
+                    .filter(p => p.service_coverage?.includes(coverage.value))
+                    .filter(p => p.status === 'active')
+                    .map(p => {
+                      const coverageProjects = projects.filter(pr => 
+                        pr.required_service_coverage?.includes(coverage.value) &&
+                        pr.assigned_partner_id === p.id &&
+                        pr.status === 'completed'
+                      );
+                      return {
+                        ...p,
+                        coverageRevenue: coverageProjects.reduce((sum, pr) => sum + (pr.final_value || 0), 0),
+                        coverageProjects: coverageProjects.length
+                      };
+                    })
+                    .filter(p => p.coverageRevenue > 0)
+                    .sort((a, b) => b.coverageRevenue - a.coverageRevenue)
+                    .slice(0, 3);
+
+                  return (
+                    <div key={coverage.value} className="border-l-4 border-l-indigo-500 pl-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h3 className="font-bold text-slate-900">{coverage.label}</h3>
+                        <Badge variant="outline" className="text-xs">{coverage.description}</Badge>
+                      </div>
+                      {coveragePartners.length > 0 ? (
+                        <div className="space-y-2">
+                          {coveragePartners.map((partner, idx) => (
+                            <div key={partner.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-slate-200 text-slate-700">#{idx + 1}</Badge>
+                                <div>
+                                  <div className="font-medium text-sm text-slate-900">{partner.company_name}</div>
+                                  <div className="text-xs text-slate-500">{partner.coverageProjects} projects</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-green-700">€{(partner.coverageRevenue / 1000).toFixed(0)}K</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-slate-500">No completed projects yet</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Coverage Distribution */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Partner Coverage Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {serviceCoverageOptions.map(coverage => {
+                  const count = partners.filter(p => p.service_coverage?.includes(coverage.value)).length;
+                  const percentage = partners.length > 0 ? (count / partners.length) * 100 : 0;
+                  return (
+                    <div key={coverage.value} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-slate-900">{coverage.label}</span>
+                        <span className="text-slate-600">{count} partners ({percentage.toFixed(0)}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div 
+                          className="bg-indigo-600 h-2 rounded-full" 
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

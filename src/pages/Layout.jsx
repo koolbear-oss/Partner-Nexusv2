@@ -36,6 +36,7 @@ function LayoutContent({ children, currentPageName }) {
     { name: 'Tenders', icon: Briefcase, page: 'Tenders', roles: ['admin', 'partner_user'] },
     { name: 'Competencies', icon: Award, page: 'Competencies', roles: ['admin', 'partner_user'] },
     { name: 'Certifications', icon: GraduationCap, page: 'Certifications', roles: ['admin', 'partner_user'] },
+    { name: 'Training Manager', icon: GraduationCap, page: 'TrainingManager', roles: ['admin'] },
     { name: 'Achievements', icon: Award, page: 'Achievements', roles: ['admin', 'partner_user'] },
     { name: 'Bonuses', icon: DollarSign, page: 'Bonuses', roles: ['admin', 'partner_user'] },
     { name: 'Pricing', icon: DollarSign, page: 'Pricing', roles: ['admin'] },

@@ -139,7 +139,7 @@ export default function Projects() {
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                          <h3 className="text-lg font-bold text-slate-900">{project.project_name}</h3>
                          <Badge className={`${statusColors[project.status]} border font-medium px-2 py-1 text-xs`}>
-                           {project.status.replace(/_/g, ' ')}
+                           {(project.status || 'tender_stage').replace(/_/g, ' ')}
                          </Badge>
                          {!isAdmin && project.assigned_partner_id === partnerId && (
                            <Badge className="bg-blue-600 text-white px-2 py-1 text-xs">

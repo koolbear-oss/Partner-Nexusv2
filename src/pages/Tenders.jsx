@@ -13,13 +13,19 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 
 export default function Tenders() {
-  const { isAdmin } = useCurrentUser();
+  const { isAdmin, partnerId } = useCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  const { data: tenders = [], isLoading } = useQuery({
+  const { data: allTenders = [], isLoading } = useQuery({
     queryKey: ['tenders'],
     queryFn: () => base44.entities.Tender.list('-created_date'),
+  });
+
+  const { data: partners = [] } = useQuery({
+    queryKey: ['partners'],
+    queryFn: () => base44.entities.Partner.list(),
+    enabled: !isAdmin,
   });
 
   const { data: verticals = [] } = useQuery({
@@ -30,6 +36,39 @@ export default function Tenders() {
   const { data: solutions = [] } = useQuery({
     queryKey: ['solutions'],
     queryFn: () => base44.entities.Solution.list(),
+  });
+
+  // Filter tenders based on user role and visibility logic
+  const tenders = isAdmin ? allTenders : allTenders.filter(tender => {
+    // Only show non-draft tenders to partners
+    if (tender.status === 'draft') return false;
+
+    // Get current partner data
+    const currentPartner = partners.find(p => p.id === partnerId);
+    if (!currentPartner) return false;
+
+    // Open tenders
+    if (tender.invitation_strategy === 'open') return true;
+
+    // Invited only
+    if (tender.invitation_strategy === 'invited_only') {
+      return tender.invited_partners?.includes(partnerId);
+    }
+
+    // Qualified only
+    if (tender.invitation_strategy === 'qualified_only') {
+      const tenderVertical = verticals.find(v => v.id === tender.vertical_id);
+      const hasVertical = tenderVertical ? currentPartner.verticals?.includes(tenderVertical.code) : false;
+      
+      const hasSolutions = tender.required_solutions?.some(solId => {
+        const solution = solutions.find(s => s.id === solId);
+        return solution && currentPartner.solutions?.includes(solution.code);
+      });
+      
+      return hasVertical && hasSolutions;
+    }
+
+    return false;
   });
 
   const filteredTenders = tenders.filter(tender => {
@@ -175,7 +214,7 @@ export default function Tenders() {
                       )}
                     </div>
                     <Badge className={statusColors[tender.status]}>
-                      {tender.status.replace(/_/g, ' ')}
+                      {(tender.status || 'draft').replace(/_/g, ' ')}
                     </Badge>
                   </div>
                   

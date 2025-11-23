@@ -24,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import AddTeamMemberDialog from '../components/partners/AddTeamMemberDialog';
 import TierBreakdown from '../components/partners/TierBreakdown';
+import PartnerTrainingStatus from '../components/training/PartnerTrainingStatus';
 import { useCurrentUser } from '../components/hooks/useCurrentUser';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -89,6 +90,14 @@ export default function PartnerDetail() {
     queryFn: () => base44.entities.Vertical.list(),
   });
 
+  const { data: serviceCoverageOptions = [] } = useQuery({
+    queryKey: ['serviceCoverageOptions'],
+    queryFn: async () => {
+      const values = await base44.entities.DropdownValue.list();
+      return values.filter(v => v.category === 'service_region_language' && v.active);
+    },
+  });
+
   if (isLoading || !partner) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
@@ -129,11 +138,19 @@ export default function PartnerDetail() {
           </button>
         </Link>
         {isAdmin && (
-          <Link to={createPageUrl(`EditPartner?id=${partnerId}`)}>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              Edit Partner
-            </Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link to={createPageUrl(`AssignProject?partnerId=${partnerId}`)}>
+              <Button variant="outline" className="gap-2">
+                <Briefcase className="w-4 h-4" />
+                Assign Project
+              </Button>
+            </Link>
+            <Link to={createPageUrl(`EditPartner?id=${partnerId}`)}>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                Edit Partner
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
 
@@ -281,10 +298,127 @@ export default function PartnerDetail() {
             <TabsTrigger value="projects">Projects</TabsTrigger>
             <TabsTrigger value="certifications">Certifications</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="training">Training</TabsTrigger>
           </TabsList>
 
         <TabsContent value="rankings">
           <TierBreakdown partnerId={partnerId} />
+        </TabsContent>
+
+        <TabsContent value="overview" className="space-y-6">
+          <PartnerTrainingStatus partner={partner} />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Service Coverage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {partner.service_coverage?.map(coverage => {
+                    const option = serviceCoverageOptions.find(opt => opt.value === coverage);
+                    return option ? (
+                      <Badge key={coverage} className="bg-indigo-100 text-indigo-800 border-indigo-200 border px-3 py-1">
+                        {option.label}
+                      </Badge>
+                    ) : null;
+                  })}
+                  {(!partner.service_coverage || partner.service_coverage.length === 0) && (
+                    <div className="text-sm text-slate-500">No service coverage defined</div>
+                  )}
+                </div>
+                {partner.language_preferences && partner.language_preferences.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <div className="text-sm font-semibold text-slate-700 mb-2">Languages</div>
+                    <div className="flex gap-2">
+                      {partner.language_preferences.map(lang => (
+                        <Badge key={lang} variant="outline" className="bg-slate-50">
+                          {lang.toUpperCase()}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Solutions Coverage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {partner.solutions?.map(code => (
+                    <Badge key={code} className="bg-blue-100 text-blue-800 border-blue-200 border px-3 py-1">
+                      {getSolutionName(code)}
+                    </Badge>
+                  ))}
+                  {(!partner.solutions || partner.solutions.length === 0) && (
+                    <div className="text-sm text-slate-500">No solutions assigned</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Vertical Markets</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {partner.verticals?.map(code => (
+                    <Badge key={code} className="bg-purple-100 text-purple-800 border-purple-200 border px-3 py-1">
+                      {getVerticalName(code)}
+                    </Badge>
+                  ))}
+                  {(!partner.verticals || partner.verticals.length === 0) && (
+                    <div className="text-sm text-slate-500">No verticals assigned</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Financial Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <div className="text-sm text-slate-500 mb-1">Revenue Last Year</div>
+                  <div className="text-2xl font-bold text-slate-900">
+                    €{(partner.revenue_last_year / 1000).toFixed(0)}K
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-500 mb-1">Quarterly Revenue</div>
+                  <div className="text-2xl font-bold text-slate-900">
+                    €{(partner.quarterly_revenue / 1000).toFixed(0)}K
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-500 mb-1">Last Bonus</div>
+                  <div className="text-2xl font-bold text-green-700">
+                    €{partner.last_bonus_amount?.toLocaleString() || 0}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {partner.notes && (
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-slate-700">{partner.notes}</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="team">
@@ -394,7 +528,7 @@ export default function PartnerDetail() {
                             </div>
                             <div>
                               <div className="text-xs text-slate-500">Success Rate</div>
-                              <div className="font-semibold text-slate-900">{cap.success_rate || 100}%</div>
+                              <div className="font-semibold text-slate-900">{cap.success_rate || 100}%}</div>
                             </div>
                           </div>
                         </div>
@@ -409,85 +543,6 @@ export default function PartnerDetail() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Solutions Coverage</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {partner.solutions?.map(code => (
-                    <Badge key={code} className="bg-blue-100 text-blue-800 border-blue-200 border px-3 py-1">
-                      {getSolutionName(code)}
-                    </Badge>
-                  ))}
-                  {(!partner.solutions || partner.solutions.length === 0) && (
-                    <div className="text-sm text-slate-500">No solutions assigned</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Vertical Markets</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {partner.verticals?.map(code => (
-                    <Badge key={code} className="bg-purple-100 text-purple-800 border-purple-200 border px-3 py-1">
-                      {getVerticalName(code)}
-                    </Badge>
-                  ))}
-                  {(!partner.verticals || partner.verticals.length === 0) && (
-                    <div className="text-sm text-slate-500">No verticals assigned</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Financial Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <div className="text-sm text-slate-500 mb-1">Revenue Last Year</div>
-                  <div className="text-2xl font-bold text-slate-900">
-                    €{(partner.revenue_last_year / 1000).toFixed(0)}K
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-500 mb-1">Quarterly Revenue</div>
-                  <div className="text-2xl font-bold text-slate-900">
-                    €{(partner.quarterly_revenue / 1000).toFixed(0)}K
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-slate-500 mb-1">Last Bonus</div>
-                  <div className="text-2xl font-bold text-green-700">
-                    €{partner.last_bonus_amount?.toLocaleString() || 0}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {partner.notes && (
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-slate-700">{partner.notes}</p>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="projects">
@@ -607,6 +662,9 @@ export default function PartnerDetail() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+        <TabsContent value="training">
+          <PartnerTrainingStatus partner={partner} />
         </TabsContent>
         </Tabs>
 

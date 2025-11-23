@@ -44,6 +44,10 @@ import ProjectExtraDiscountManager from "./ProjectExtraDiscountManager";
 
 import TierSettings from "./TierSettings";
 
+import TrainingManager from "./TrainingManager";
+
+import AssignProject from "./AssignProject";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -91,6 +95,10 @@ const PAGES = {
     ProjectExtraDiscountManager: ProjectExtraDiscountManager,
     
     TierSettings: TierSettings,
+    
+    TrainingManager: TrainingManager,
+    
+    AssignProject: AssignProject,
     
 }
 
@@ -162,6 +170,10 @@ function PagesContent() {
                 <Route path="/ProjectExtraDiscountManager" element={<ProjectExtraDiscountManager />} />
                 
                 <Route path="/TierSettings" element={<TierSettings />} />
+                
+                <Route path="/TrainingManager" element={<TrainingManager />} />
+                
+                <Route path="/AssignProject" element={<AssignProject />} />
                 
             </Routes>
         </Layout>
