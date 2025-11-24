@@ -34,10 +34,12 @@ function LayoutContent({ children, currentPageName }) {
     { name: 'Projects', icon: Briefcase, page: 'Projects', roles: ['admin', 'partner_user'] },
     { name: 'Create Project', icon: Briefcase, page: 'CreateProject', roles: ['partner_user'] },
     { name: 'Tenders', icon: Briefcase, page: 'Tenders', roles: ['admin', 'partner_user'] },
-    { name: 'Competencies', icon: Award, page: 'Competencies', roles: ['admin', 'partner_user'] },
-    { name: 'Certifications', icon: GraduationCap, page: 'Certifications', roles: ['admin', 'partner_user'] },
+    { name: 'Training', icon: GraduationCap, page: 'PartnerTraining', roles: ['partner_user'] },
+    { name: 'Qualifications', icon: Award, page: 'QualificationsView', roles: ['partner_user'] },
+    { name: 'Achievements', icon: Award, page: 'AchievementsView', roles: ['partner_user'] },
     { name: 'Training Manager', icon: GraduationCap, page: 'TrainingManager', roles: ['admin'] },
-    { name: 'Achievements', icon: Award, page: 'Achievements', roles: ['admin', 'partner_user'] },
+    { name: 'Qualifications Manager', icon: Settings, page: 'QualificationsManager', roles: ['admin'] },
+    { name: 'Achievements Manager', icon: Settings, page: 'AchievementsManager', roles: ['admin'] },
     { name: 'Bonuses', icon: DollarSign, page: 'Bonuses', roles: ['admin', 'partner_user'] },
     { name: 'Pricing', icon: DollarSign, page: 'Pricing', roles: ['admin'] },
     { name: 'Product Discounts', icon: DollarSign, page: 'ProductGroupDiscountManager', roles: ['admin'] },
@@ -129,13 +131,19 @@ function LayoutContent({ children, currentPageName }) {
                     onChange={setMimicPartnerId}
                   />
                 )}
-                <button className="relative text-slate-600 hover:text-slate-900">
+                <button 
+                  className="relative text-slate-600 hover:text-slate-900 transition-colors"
+                  onClick={() => alert('Notifications feature coming soon!')}
+                >
                   <Bell className="w-5 h-5" />
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
                     3
                   </span>
                 </button>
-                <button className="text-slate-600 hover:text-slate-900">
+                <button 
+                  className="text-slate-600 hover:text-slate-900 transition-colors"
+                  onClick={() => alert('Settings feature coming soon!')}
+                >
                   <Settings className="w-5 h-5" />
                 </button>
               </div>

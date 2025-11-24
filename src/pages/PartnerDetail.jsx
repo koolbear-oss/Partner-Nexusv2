@@ -25,6 +25,8 @@ import { Button } from '@/components/ui/button';
 import AddTeamMemberDialog from '../components/partners/AddTeamMemberDialog';
 import TierBreakdown from '../components/partners/TierBreakdown';
 import PartnerTrainingStatus from '../components/training/PartnerTrainingStatus';
+import QuickTrainingActions from '../components/training/QuickTrainingActions';
+import TrainingInvitationDialog from '../components/training/TrainingInvitationDialog';
 import { useCurrentUser } from '../components/hooks/useCurrentUser';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -34,6 +36,7 @@ export default function PartnerDetail() {
   const partnerId = urlParams.get('id');
   const { isAdmin } = useCurrentUser();
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [invitationProduct, setInvitationProduct] = useState(null);
 
   const { data: partner, isLoading } = useQuery({
     queryKey: ['partner', partnerId],
@@ -118,12 +121,12 @@ export default function PartnerDetail() {
   };
 
   const getSolutionName = (code) => {
-    const solution = solutions.find(s => s.code === code);
+    const solution = solutions.find(s => s.code === code || s.id === code);
     return solution?.name || code;
   };
 
   const getVerticalName = (code) => {
-    const vertical = verticals.find(v => v.code === code);
+    const vertical = verticals.find(v => v.code === code || v.id === code);
     return vertical?.name || code;
   };
 
@@ -139,6 +142,7 @@ export default function PartnerDetail() {
         </Link>
         {isAdmin && (
           <div className="flex gap-3">
+            <QuickTrainingActions partner={partner} />
             <Link to={createPageUrl(`AssignProject?partnerId=${partnerId}`)}>
               <Button variant="outline" className="gap-2">
                 <Briefcase className="w-4 h-4" />
@@ -306,7 +310,12 @@ export default function PartnerDetail() {
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
-          <PartnerTrainingStatus partner={partner} />
+          <PartnerTrainingStatus 
+            partner={{
+              ...partner,
+              onWarningClick: isAdmin ? (product) => setInvitationProduct(product) : undefined
+            }} 
+          />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="shadow-sm">
@@ -348,7 +357,14 @@ export default function PartnerDetail() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {partner.solutions?.map(code => (
+                  {[...new Set(
+                    partner.solutions
+                      ?.map(code => {
+                        const sol = solutions.find(s => s.code === code || s.id === code);
+                        return sol?.code;
+                      })
+                      .filter(Boolean) || []
+                  )].map(code => (
                     <Badge key={code} className="bg-blue-100 text-blue-800 border-blue-200 border px-3 py-1">
                       {getSolutionName(code)}
                     </Badge>
@@ -368,7 +384,14 @@ export default function PartnerDetail() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {partner.verticals?.map(code => (
+                  {[...new Set(
+                    partner.verticals
+                      ?.map(code => {
+                        const vert = verticals.find(v => v.code === code || v.id === code);
+                        return vert?.code;
+                      })
+                      .filter(Boolean) || []
+                  )].map(code => (
                     <Badge key={code} className="bg-purple-100 text-purple-800 border-purple-200 border px-3 py-1">
                       {getVerticalName(code)}
                     </Badge>
@@ -674,6 +697,14 @@ export default function PartnerDetail() {
           onClose={() => setShowAddMemberDialog(false)}
           partnerId={partnerId}
         />
+        )}
+        {isAdmin && invitationProduct && (
+          <TrainingInvitationDialog
+            open={!!invitationProduct}
+            onClose={() => setInvitationProduct(null)}
+            partnerId={partnerId}
+            productCode={invitationProduct}
+          />
         )}
         </div>
         );

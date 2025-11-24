@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, Calendar, MapPin, DollarSign, FileText, 
-  Users, CheckCircle2, XCircle, Clock, Trophy, Send, AlertCircle
+  Users, CheckCircle2, XCircle, Clock, Trophy, Send, AlertCircle, Shield, Upload
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
@@ -23,13 +23,22 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import TenderQA from '../components/tenders/TenderQA';
+import SubmitTenderInterest from '../components/tenders/SubmitTenderInterest';
+import SubmitTenderProposal from '../components/tenders/SubmitTenderProposal';
+import ReviewTenderInterests from '../components/tenders/ReviewTenderInterests';
+import TenderVisibilityList from '../components/tenders/TenderVisibilityList';
+import TenderNDADialog from '../components/tenders/TenderNDADialog';
 
 export default function TenderDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const tenderId = urlParams.get('id');
-  const { isAdmin, partnerId } = useCurrentUser();
+  const { isAdmin, partnerId, user } = useCurrentUser();
   const queryClient = useQueryClient();
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showInterestDialog, setShowInterestDialog] = useState(false);
+  const [showProposalDialog, setShowProposalDialog] = useState(false);
+  const [showNDADialog, setShowNDADialog] = useState(false);
+  const [ndaAccepted, setNdaAccepted] = useState(false);
 
   const { data: tender, isLoading } = useQuery({
     queryKey: ['tender', tenderId],
@@ -55,6 +64,25 @@ export default function TenderDetail() {
     queryFn: () => base44.entities.Vertical.list(),
   });
 
+  const { data: userNDA } = useQuery({
+    queryKey: ['tenderNDA', tenderId, user?.email],
+    queryFn: async () => {
+      const ndas = await base44.entities.TenderNDA.list();
+      return ndas.find(n => n.tender_id === tenderId && n.user_email === user?.email);
+    },
+    enabled: !!tenderId && !!user?.email && !isAdmin,
+  });
+
+  React.useEffect(() => {
+    if (!isAdmin && tender && tender.status !== 'draft' && user?.email) {
+      if (userNDA) {
+        setNdaAccepted(true);
+      } else {
+        setShowNDADialog(true);
+      }
+    }
+  }, [isAdmin, tender, userNDA, user]);
+
   const publishTenderMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.Tender.update(id, { status }),
     onSuccess: () => {
@@ -75,6 +103,29 @@ export default function TenderDetail() {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
 
+  if (!isAdmin && !ndaAccepted && tender.status !== 'draft') {
+    return (
+      <>
+        <TenderNDADialog
+          open={showNDADialog}
+          tender={tender}
+          userEmail={user?.email}
+          partnerId={partnerId}
+          onAccept={() => {
+            setNdaAccepted(true);
+            setShowNDADialog(false);
+          }}
+        />
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Shield className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-600">Please accept the NDA to view tender details</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   const statusColors = {
     draft: 'bg-gray-100 text-gray-800',
     published: 'bg-blue-100 text-blue-800',
@@ -85,8 +136,9 @@ export default function TenderDetail() {
   };
 
   const responseStatusColors = {
-    submitted: 'bg-blue-100 text-blue-800',
-    shortlisted: 'bg-purple-100 text-purple-800',
+    interest_submitted: 'bg-blue-100 text-blue-800',
+    calculating: 'bg-amber-100 text-amber-800',
+    proposal_submitted: 'bg-purple-100 text-purple-800',
     rejected: 'bg-red-100 text-red-800',
     awarded: 'bg-green-100 text-green-800',
   };
@@ -95,12 +147,19 @@ export default function TenderDetail() {
   const getSolutionName = (id) => solutions.find(s => s.id === id)?.name || 'Unknown';
   const getPartnerName = (id) => partners.find(p => p.id === id)?.company_name || 'Unknown';
 
-  const canRespond = !isAdmin && 
-    tender.status === 'response_period' &&
-    (tender.invitation_strategy === 'open' || 
-     tender.invited_partners?.includes(partnerId));
-
   const myResponse = tender.responses?.find(r => r.partner_id === partnerId);
+  const hasAwarded = tender.responses?.some(r => r.status === 'awarded');
+  const canExpressInterest = !isAdmin && 
+    tender.status !== 'draft' && 
+    tender.status !== 'cancelled' &&
+    tender.status !== 'awarded' &&
+    !myResponse &&
+    !hasAwarded &&
+    ndaAccepted;
+  
+  const canSubmitProposal = !isAdmin && 
+    myResponse?.status === 'calculating' &&
+    ndaAccepted;
 
   return (
     <div className="space-y-6">
@@ -111,15 +170,24 @@ export default function TenderDetail() {
             <span>Back to Tenders</span>
           </button>
         </Link>
-        {isAdmin && tender.status === 'draft' && (
-          <Button 
-            onClick={() => setShowPublishDialog(true)}
-            className="bg-green-600 hover:bg-green-700 gap-2"
-          >
-            <Send className="w-4 h-4" />
-            Publish Tender
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {isAdmin && (
+            <Link to={createPageUrl(`EditTender?id=${tenderId}`)}>
+              <Button variant="outline" className="gap-2">
+                Edit Tender
+              </Button>
+            </Link>
+          )}
+          {isAdmin && tender.status === 'draft' && (
+            <Button 
+              onClick={() => setShowPublishDialog(true)}
+              className="bg-green-600 hover:bg-green-700 gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Publish Tender
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Header */}
@@ -132,6 +200,12 @@ export default function TenderDetail() {
                 <Badge className={statusColors[tender.status]}>
                   {tender.status.replace(/_/g, ' ')}
                 </Badge>
+                {!isAdmin && ndaAccepted && (
+                  <Badge className="bg-blue-100 text-blue-800 border-blue-300 border flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    NDA Signed
+                  </Badge>
+                )}
               </div>
 
               {tender.tender_code && (
@@ -157,11 +231,37 @@ export default function TenderDetail() {
                     </div>
                   </div>
                 )}
+                {tender.estimated_gross_value && (
+                  <div className="flex items-center gap-3 text-slate-600">
+                    <DollarSign className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <div className="text-xs text-slate-500">
+                        {isAdmin ? 'ASSA ABLOY Gross Value (Est.)' : 'ASSA ABLOY Value Range'}
+                      </div>
+                      <div className="font-medium text-blue-700">
+                        {isAdmin ? (
+                          `€${(tender.estimated_gross_value / 1000).toFixed(0)}K`
+                        ) : (
+                          (() => {
+                            const variance = tender.budget_min && tender.budget_max 
+                              ? ((tender.budget_max - tender.budget_min) / ((tender.budget_min + tender.budget_max) / 2)) / 2
+                              : 0.1;
+                            const minValue = tender.estimated_gross_value * (1 - variance);
+                            const maxValue = tender.estimated_gross_value * (1 + variance);
+                            return `€${(minValue / 1000).toFixed(0)}K - €${(maxValue / 1000).toFixed(0)}K`;
+                          })()
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {tender.budget_max && (
                   <div className="flex items-center gap-3 text-slate-600">
                     <DollarSign className="w-5 h-5" />
                     <div>
-                      <div className="text-xs text-slate-500">Budget Range</div>
+                      <div className="text-xs text-slate-500">
+                        {isAdmin ? 'End User Total Budget' : 'Total Project Budget'}
+                      </div>
                       <div className="font-medium">
                         €{(tender.budget_min / 1000).toFixed(0)}K - €{(tender.budget_max / 1000).toFixed(0)}K
                       </div>
@@ -207,18 +307,49 @@ export default function TenderDetail() {
                       <div className="font-bold text-slate-900">{getPartnerName(tender.awarded_to)}</div>
                     </div>
                   )}
-                  {canRespond && !myResponse && (
-                    <Button className="w-full mt-4 bg-blue-900 hover:bg-blue-800">
-                      Submit Response
+                  {canExpressInterest && (
+                    <Button 
+                      onClick={() => setShowInterestDialog(true)}
+                      className="w-full mt-4 bg-blue-900 hover:bg-blue-800"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Express Interest
+                    </Button>
+                  )}
+                  {canSubmitProposal && (
+                    <Button 
+                      onClick={() => setShowProposalDialog(true)}
+                      className="w-full mt-4 bg-green-600 hover:bg-green-700"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Submit Proposal
                     </Button>
                   )}
                   {myResponse && (
                     <div className="mt-4 p-3 bg-white rounded-lg border border-blue-300">
                       <div className="text-xs text-blue-700 font-semibold mb-1">Your Response</div>
                       <Badge className={responseStatusColors[myResponse.status]}>
-                        {myResponse.status}
+                        {myResponse.status === 'interest_submitted' && 'Interest Submitted'}
+                        {myResponse.status === 'calculating' && 'Calculating'}
+                        {myResponse.status === 'proposal_submitted' && 'Proposal Submitted'}
+                        {myResponse.status === 'rejected' && 'Not Selected'}
+                        {myResponse.status === 'awarded' && 'Awarded'}
                       </Badge>
+                      <div className="text-xs text-slate-600 mt-2">
+                        {myResponse.status === 'interest_submitted' && 'Awaiting approval from ASSA ABLOY to access documents'}
+                        {myResponse.status === 'calculating' && 'You can now access documents and prepare your proposal'}
+                        {myResponse.status === 'proposal_submitted' && 'Your proposal is under review'}
+                        {myResponse.status === 'rejected' && 'Thank you for your interest'}
+                        {myResponse.status === 'awarded' && 'Congratulations! This tender has been awarded to you'}
+                      </div>
                     </div>
+                  )}
+                  {!isAdmin && tender.status === 'awarded' && !myResponse && (
+                    <Alert className="mt-4 bg-slate-50 border-slate-200">
+                      <AlertDescription className="text-slate-700 text-sm">
+                        This tender has been awarded to another partner
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </CardContent>
               </Card>
@@ -238,6 +369,67 @@ export default function TenderDetail() {
 
         <TabsContent value="details">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Financial Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {tender.budget_max && (
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="text-sm font-semibold text-slate-700 mb-2">Total Project Budget</div>
+                    <div className="text-2xl font-bold text-slate-900">
+                      €{(tender.budget_min / 1000).toFixed(0)}K - €{(tender.budget_max / 1000).toFixed(0)}K
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Full security/access control budget for the project
+                    </div>
+                  </div>
+                )}
+                {tender.estimated_gross_value && (
+                  <div className={`p-3 rounded-lg border ${
+                    tender.budget_max && tender.estimated_gross_value > tender.budget_max
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <div className={`text-sm font-semibold mb-2 ${
+                      tender.budget_max && tender.estimated_gross_value > tender.budget_max
+                        ? 'text-red-700'
+                        : 'text-blue-700'
+                    }`}>
+                      ASSA ABLOY Gross Value
+                      {tender.budget_max && tender.estimated_gross_value > tender.budget_max && (
+                        <span className="ml-2 text-xs">⚠️ Invalid</span>
+                      )}
+                    </div>
+                    <div className={`text-2xl font-bold ${
+                      tender.budget_max && tender.estimated_gross_value > tender.budget_max
+                        ? 'text-red-900'
+                        : 'text-blue-900'
+                    }`}>
+                      €{(tender.estimated_gross_value / 1000).toFixed(0)}K
+                    </div>
+                    <div className={`text-xs mt-1 ${
+                      tender.budget_max && tender.estimated_gross_value > tender.budget_max
+                        ? 'text-red-600'
+                        : 'text-blue-600'
+                    }`}>
+                      Estimated ASSA ABLOY list price before partner discounts
+                    </div>
+                    {tender.budget_max && (
+                      <div className={`text-xs mt-2 font-medium ${
+                        tender.estimated_gross_value > tender.budget_max
+                          ? 'text-red-700'
+                          : 'text-blue-700'
+                      }`}>
+                        {((tender.estimated_gross_value / tender.budget_max) * 100).toFixed(1)}% of total project budget
+                        {tender.estimated_gross_value > tender.budget_max && ' - Exceeds budget!'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg">Project Details</CardTitle>
@@ -264,16 +456,31 @@ export default function TenderDetail() {
 
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Required Solutions</CardTitle>
+                <CardTitle className="text-lg">Project Services</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {tender.required_solutions?.map(solId => (
-                    <div key={solId} className="flex items-center gap-2 p-2 bg-slate-50 rounded">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      <span className="text-slate-900">{getSolutionName(solId)}</span>
+              <CardContent className="space-y-4">
+                {tender.assa_abloy_products && tender.assa_abloy_products.length > 0 && (
+                  <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                    <div className="text-base font-bold text-blue-900 mb-3">ASSA ABLOY Products</div>
+                    <div className="flex flex-wrap gap-2">
+                      {tender.assa_abloy_products.map((product, idx) => (
+                        <Badge key={idx} className="bg-blue-600 text-white text-sm px-3 py-1.5">
+                          {product}
+                        </Badge>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm font-semibold text-slate-700 mb-2">Required Solutions</div>
+                  <div className="space-y-2">
+                    {tender.required_solutions?.map(solId => (
+                      <div key={solId} className="flex items-center gap-2 p-2 bg-slate-50 rounded">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span className="text-slate-900">{getSolutionName(solId)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -286,7 +493,23 @@ export default function TenderDetail() {
               <CardTitle className="text-lg">Tender Documents</CardTitle>
             </CardHeader>
             <CardContent>
-              {tender.tender_documents && tender.tender_documents.length > 0 ? (
+              {!isAdmin && myResponse?.status === 'interest_submitted' ? (
+                <Alert className="bg-amber-50 border-amber-200">
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                  <AlertDescription className="text-amber-900">
+                    <strong>Access Pending:</strong> Your interest has been submitted. Once ASSA ABLOY approves 
+                    your request, you'll gain access to all tender documents here.
+                  </AlertDescription>
+                </Alert>
+              ) : !isAdmin && !myResponse ? (
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertCircle className="w-4 h-4 text-blue-600" />
+                  <AlertDescription className="text-blue-900">
+                    <strong>Express Interest First:</strong> Submit your interest in this tender to request 
+                    access to confidential documents.
+                  </AlertDescription>
+                </Alert>
+              ) : tender.tender_documents && tender.tender_documents.length > 0 ? (
                 <div className="space-y-3">
                   {tender.tender_documents.map((doc, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -312,136 +535,18 @@ export default function TenderDetail() {
 
         {isAdmin && (
           <TabsContent value="responses">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Partner Responses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {tender.responses && tender.responses.length > 0 ? (
-                  <div className="space-y-4">
-                    {tender.responses.map((response, idx) => (
-                      <div key={idx} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="font-bold text-slate-900 mb-1">
-                              {getPartnerName(response.partner_id)}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              Submitted: {format(new Date(response.submitted_at), 'MMM d, yyyy HH:mm')}
-                            </div>
-                          </div>
-                          <Badge className={responseStatusColors[response.status]}>
-                            {response.status}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 mb-3">
-                          <div>
-                            <div className="text-xs text-slate-500">Proposed Value</div>
-                            <div className="font-semibold text-slate-900">
-                              €{(response.proposed_value / 1000).toFixed(0)}K
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-slate-500">Proposed Timeline</div>
-                            <div className="font-semibold text-slate-900">{response.proposed_timeline} days</div>
-                          </div>
-                        </div>
-                        {response.shortlist_notes && (
-                          <div className="text-sm text-slate-600 italic mt-2">
-                            Notes: {response.shortlist_notes}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-slate-500">
-                    No responses received yet
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ReviewTenderInterests tender={tender} />
           </TabsContent>
         )}
 
         {isAdmin && tender.status !== 'draft' && (
           <TabsContent value="visibility">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg">Partner Visibility</CardTitle>
-                <p className="text-sm text-slate-600 mt-1">
-                  Partners who can see and respond to this tender based on the invitation strategy
-                </p>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  let eligiblePartners = [];
-                  
-                  if (tender.invitation_strategy === 'open') {
-                    eligiblePartners = partners.filter(p => p.status === 'active');
-                  } else if (tender.invitation_strategy === 'invited_only') {
-                    eligiblePartners = partners.filter(p => 
-                      tender.invited_partners?.includes(p.id)
-                    );
-                  } else if (tender.invitation_strategy === 'qualified_only') {
-                    eligiblePartners = partners.filter(p => {
-                      if (p.status !== 'active') return false;
-                      
-                      // Check vertical match
-                      const tenderVertical = verticals.find(v => v.id === tender.vertical_id);
-                      const hasVertical = tenderVertical ? p.verticals?.includes(tenderVertical.code) : false;
-                      
-                      // Check solution match - tender.required_solutions contains solution IDs
-                      const hasSolutions = tender.required_solutions?.some(solId => {
-                        const solution = solutions.find(s => s.id === solId);
-                        return solution && p.solutions?.includes(solution.code);
-                      });
-                      
-                      // For open strategy, we only require active status
-                      // For qualified, we need both vertical and solutions
-                      return hasVertical && hasSolutions;
-                    });
-                  } else {
-                    // If strategy is 'open' or unrecognized, show all active partners
-                    eligiblePartners = partners.filter(p => p.status === 'active');
-                  }
-
-                  return eligiblePartners.length > 0 ? (
-                    <div className="space-y-3">
-                      {eligiblePartners.map(partner => (
-                        <div key={partner.id} className="p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-bold text-slate-900">{partner.company_name}</div>
-                              <div className="text-sm text-slate-600 mt-1">
-                                Tier: <Badge className="ml-1">{partner.tier}</Badge>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs text-slate-500">Contact</div>
-                              <div className="text-sm text-slate-700">{partner.primary_contact?.email || partner.contact_email}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="text-sm font-semibold text-blue-900">
-                          Total: {eligiblePartners.length} partner(s) can see this tender
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="text-slate-500 mb-2">No partners match the visibility criteria</div>
-                      <div className="text-sm text-slate-400">
-                        {tender.invitation_strategy === 'invited_only' && 'No partners have been invited'}
-                        {tender.invitation_strategy === 'qualified_only' && 'No partners meet the required qualifications'}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
+            <TenderVisibilityList 
+              tender={tender} 
+              partners={partners}
+              solutions={solutions}
+              verticals={verticals}
+            />
           </TabsContent>
         )}
 
@@ -553,6 +658,26 @@ export default function TenderDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Submit Interest Dialog */}
+      {showInterestDialog && (
+        <SubmitTenderInterest
+          open={showInterestDialog}
+          onClose={() => setShowInterestDialog(false)}
+          tender={tender}
+          partnerId={partnerId}
+        />
+      )}
+
+      {/* Submit Proposal Dialog */}
+      {showProposalDialog && (
+        <SubmitTenderProposal
+          open={showProposalDialog}
+          onClose={() => setShowProposalDialog(false)}
+          tender={tender}
+          partnerId={partnerId}
+        />
+      )}
     </div>
   );
 }

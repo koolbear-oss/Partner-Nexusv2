@@ -53,6 +53,12 @@ export const PartnerSolutionVerticalScore = base44.entities.PartnerSolutionVerti
 
 export const TierConfiguration = base44.entities.TierConfiguration;
 
+export const TenderNDA = base44.entities.TenderNDA;
+
+export const Notification = base44.entities.Notification;
+
+export const TrainingRequirement = base44.entities.TrainingRequirement;
+
 
 
 // auth sdk:

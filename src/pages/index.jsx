@@ -22,8 +22,6 @@ import Marketplace from "./Marketplace";
 
 import Tenders from "./Tenders";
 
-import Achievements from "./Achievements";
-
 import ProjectDetail from "./ProjectDetail";
 
 import TenderDetail from "./TenderDetail";
@@ -47,6 +45,18 @@ import TierSettings from "./TierSettings";
 import TrainingManager from "./TrainingManager";
 
 import AssignProject from "./AssignProject";
+
+import EditTender from "./EditTender";
+
+import PartnerTraining from "./PartnerTraining";
+
+import QualificationsView from "./QualificationsView";
+
+import QualificationsManager from "./QualificationsManager";
+
+import AchievementsView from "./AchievementsView";
+
+import AchievementsManager from "./AchievementsManager";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -74,8 +84,6 @@ const PAGES = {
     
     Tenders: Tenders,
     
-    Achievements: Achievements,
-    
     ProjectDetail: ProjectDetail,
     
     TenderDetail: TenderDetail,
@@ -99,6 +107,18 @@ const PAGES = {
     TrainingManager: TrainingManager,
     
     AssignProject: AssignProject,
+    
+    EditTender: EditTender,
+    
+    PartnerTraining: PartnerTraining,
+    
+    QualificationsView: QualificationsView,
+    
+    QualificationsManager: QualificationsManager,
+    
+    AchievementsView: AchievementsView,
+    
+    AchievementsManager: AchievementsManager,
     
 }
 
@@ -149,8 +169,6 @@ function PagesContent() {
                 
                 <Route path="/Tenders" element={<Tenders />} />
                 
-                <Route path="/Achievements" element={<Achievements />} />
-                
                 <Route path="/ProjectDetail" element={<ProjectDetail />} />
                 
                 <Route path="/TenderDetail" element={<TenderDetail />} />
@@ -174,6 +192,18 @@ function PagesContent() {
                 <Route path="/TrainingManager" element={<TrainingManager />} />
                 
                 <Route path="/AssignProject" element={<AssignProject />} />
+                
+                <Route path="/EditTender" element={<EditTender />} />
+                
+                <Route path="/PartnerTraining" element={<PartnerTraining />} />
+                
+                <Route path="/QualificationsView" element={<QualificationsView />} />
+                
+                <Route path="/QualificationsManager" element={<QualificationsManager />} />
+                
+                <Route path="/AchievementsView" element={<AchievementsView />} />
+                
+                <Route path="/AchievementsManager" element={<AchievementsManager />} />
                 
             </Routes>
         </Layout>

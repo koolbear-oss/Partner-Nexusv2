@@ -137,7 +137,11 @@ export default function PartnerTrainingStatus({ partner }) {
       </CardHeader>
       <CardContent className="space-y-3">
         {trainingStatuses.map(({ product, status, color, icon: Icon, message }) => (
-          <div key={product} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50">
+          <div 
+            key={product} 
+            onClick={() => partner?.onWarningClick && (status === 'missing' || status === 'expired') && partner.onWarningClick(product)}
+            className={`flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50 ${partner?.onWarningClick && (status === 'missing' || status === 'expired') ? 'cursor-pointer hover:bg-slate-100 transition-colors' : ''}`}
+          >
             <div className="flex items-center gap-3">
               <Icon className={`w-5 h-5 text-${color}-600`} />
               <div>

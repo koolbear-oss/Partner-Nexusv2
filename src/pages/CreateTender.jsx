@@ -308,36 +308,56 @@ export default function CreateTender() {
             <CardTitle>Financial Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Estimated Gross Value (€) *</Label>
-                <Input
-                  type="number"
-                  value={formData.estimated_gross_value}
-                  onChange={(e) => updateField('estimated_gross_value', e.target.value)}
-                  placeholder="50000"
-                  required
-                />
-                <p className="text-xs text-slate-500 mt-1">ASSA ABLOY list price (before partner discounts)</p>
-              </div>
-              <div>
-                <Label>Budget Min (€)</Label>
+                <Label>End User Total Budget Min (€)</Label>
                 <Input
                   type="number"
                   value={formData.budget_min}
                   onChange={(e) => updateField('budget_min', e.target.value)}
-                  placeholder="40000"
+                  placeholder="1500000"
                 />
+                <p className="text-xs text-slate-500 mt-1">Minimum total project budget from end customer</p>
               </div>
               <div>
-                <Label>Budget Max (€)</Label>
+                <Label>End User Total Budget Max (€)</Label>
                 <Input
                   type="number"
                   value={formData.budget_max}
                   onChange={(e) => updateField('budget_max', e.target.value)}
-                  placeholder="60000"
+                  placeholder="2000000"
                 />
+                <p className="text-xs text-slate-500 mt-1">Maximum total project budget from end customer</p>
               </div>
+            </div>
+            {formData.budget_min && formData.budget_max && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="text-sm text-slate-700">
+                  <strong>Budget Range:</strong> €{(formData.budget_min / 1000).toFixed(0)}K - €{(formData.budget_max / 1000).toFixed(0)}K
+                  <span className="ml-3 text-slate-500">
+                    (±{(((formData.budget_max - formData.budget_min) / ((formData.budget_min + formData.budget_max) / 2)) * 100).toFixed(1)}% variance)
+                  </span>
+                </div>
+              </div>
+            )}
+            <div>
+              <Label>ASSA ABLOY Estimated Gross Value (€) *</Label>
+              <Input
+                type="number"
+                value={formData.estimated_gross_value}
+                onChange={(e) => updateField('estimated_gross_value', e.target.value)}
+                placeholder="500000"
+                required
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Estimated ASSA ABLOY list price (before partner discounts). Partners will see a range based on budget variance.
+              </p>
+              {formData.estimated_gross_value && formData.budget_min && formData.budget_max && (
+                <div className="text-xs text-blue-700 mt-2">
+                  Partners will see: €{((formData.estimated_gross_value * (1 - ((formData.budget_max - formData.budget_min) / ((formData.budget_min + formData.budget_max) / 2)) / 2)) / 1000).toFixed(0)}K - 
+                  €{((formData.estimated_gross_value * (1 + ((formData.budget_max - formData.budget_min) / ((formData.budget_min + formData.budget_max) / 2)) / 2)) / 1000).toFixed(0)}K
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

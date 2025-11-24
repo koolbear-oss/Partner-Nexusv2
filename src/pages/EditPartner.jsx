@@ -333,18 +333,23 @@ export default function EditPartner() {
                       <label key={solution.code} className="flex items-center gap-2 px-3 py-1 border rounded-lg cursor-pointer hover:bg-slate-50">
                         <input
                           type="checkbox"
-                          checked={formData.solutions?.includes(solution.code)}
+                          checked={formData.solutions?.includes(solution.code) || formData.solutions?.includes(solution.id)}
                           onChange={(e) => {
                             const current = formData.solutions || [];
                             const updated = e.target.checked
-                              ? [...current, solution.code]
-                              : current.filter(s => s !== solution.code);
+                              ? [...current.filter(s => !solutions.find(sol => sol.id === s || sol.code === s)), solution.code]
+                              : current.filter(s => s !== solution.code && s !== solution.id);
                             setFormData({ ...formData, solutions: updated });
                           }}
                         />
                         <span className="text-sm">{solution.name}</span>
                       </label>
                     ))}
+                    {formData.solutions?.filter(s => !solutions.find(sol => sol.code === s || sol.id === s)).length > 0 && (
+                      <Badge className="bg-red-100 text-red-800 border-red-300 border px-2 py-1 text-xs">
+                        {formData.solutions.filter(s => !solutions.find(sol => sol.code === s || sol.id === s)).length} legacy item(s)
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -354,18 +359,23 @@ export default function EditPartner() {
                       <label key={vertical.code} className="flex items-center gap-2 px-3 py-1 border rounded-lg cursor-pointer hover:bg-slate-50">
                         <input
                           type="checkbox"
-                          checked={formData.verticals?.includes(vertical.code)}
+                          checked={formData.verticals?.includes(vertical.code) || formData.verticals?.includes(vertical.id)}
                           onChange={(e) => {
                             const current = formData.verticals || [];
                             const updated = e.target.checked
-                              ? [...current, vertical.code]
-                              : current.filter(v => v !== vertical.code);
+                              ? [...current.filter(v => !verticals.find(vert => vert.id === v || vert.code === v)), vertical.code]
+                              : current.filter(v => v !== vertical.code && v !== vertical.id);
                             setFormData({ ...formData, verticals: updated });
                           }}
                         />
                         <span className="text-sm">{vertical.name}</span>
                       </label>
                     ))}
+                    {formData.verticals?.filter(v => !verticals.find(vert => vert.code === v || vert.id === v)).length > 0 && (
+                      <Badge className="bg-red-100 text-red-800 border-red-300 border px-2 py-1 text-xs">
+                        {formData.verticals.filter(v => !verticals.find(vert => vert.code === v || vert.id === v)).length} legacy item(s)
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -404,21 +414,55 @@ export default function EditPartner() {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-6 border-t">
+            <div className="flex justify-between items-center pt-6 border-t">
               <Button 
                 type="button" 
                 variant="outline"
-                onClick={() => navigate(createPageUrl(`PartnerDetail?id=${partnerId}`))}
+                onClick={() => {
+                  if (confirm('This will remove all legacy data (UUIDs) and duplicates. Continue?')) {
+                    // Clean and deduplicate solutions
+                    const cleanSolutions = [...new Set(
+                      formData.solutions
+                        ?.map(s => {
+                          const sol = solutions.find(sol => sol.code === s || sol.id === s);
+                          return sol ? sol.code : null;
+                        })
+                        .filter(Boolean) || []
+                    )];
+                    
+                    // Clean and deduplicate verticals
+                    const cleanVerticals = [...new Set(
+                      formData.verticals
+                        ?.map(v => {
+                          const vert = verticals.find(vert => vert.code === v || vert.id === v);
+                          return vert ? vert.code : null;
+                        })
+                        .filter(Boolean) || []
+                    )];
+                    
+                    setFormData({ ...formData, solutions: cleanSolutions, verticals: cleanVerticals });
+                  }
+                }}
+                className="text-orange-600 hover:text-orange-700"
               >
-                Cancel
+                Clean Up Legacy Data
               </Button>
-              <Button 
-                type="submit" 
-                className="bg-blue-600 hover:bg-blue-700"
-                disabled={updateMutation.isPending}
-              >
-                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
+              <div className="flex gap-3">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => navigate(createPageUrl(`PartnerDetail?id=${partnerId}`))}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

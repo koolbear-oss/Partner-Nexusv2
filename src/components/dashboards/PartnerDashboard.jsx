@@ -15,9 +15,13 @@ import {
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../../utils';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import PartnerTrainingStatus from '../training/PartnerTrainingStatus';
+import PartnerTrainingSuggestionDialog from '../training/PartnerTrainingSuggestionDialog';
+import { useState } from 'react';
 
 export default function PartnerDashboard() {
   const { user, partnerId } = useCurrentUser();
+  const [suggestionProduct, setSuggestionProduct] = useState(null);
 
   const { data: partner } = useQuery({
     queryKey: ['partner', partnerId],
@@ -151,6 +155,14 @@ export default function PartnerDashboard() {
         </Card>
       </div>
 
+      {/* Training Status */}
+      <PartnerTrainingStatus 
+        partner={{
+            ...partner,
+            onWarningClick: (product) => setSuggestionProduct(product)
+        }} 
+      />
+
       {(expiringCerts > 0 || expiredCerts > 0) && (
         <Card className={`border-l-4 ${expiredCerts > 0 ? 'border-l-red-500 bg-red-50/50' : 'border-l-yellow-500 bg-yellow-50/50'}`}>
           <CardContent className="pt-6">
@@ -230,6 +242,14 @@ export default function PartnerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {suggestionProduct && (
+        <PartnerTrainingSuggestionDialog
+          open={!!suggestionProduct}
+          onClose={() => setSuggestionProduct(null)}
+          productCode={suggestionProduct}
+        />
+      )}
     </div>
   );
 }

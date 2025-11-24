@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,11 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function CreateTrainingDialog({ open, onClose, assaAbloyProducts }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     assa_abloy_product: '',
+    verticals: [],
+    event_type: 'product_training',
+    is_mandatory: false,
+    influences_bonus: true,
     training_type: 'annual_certification',
     title: '',
     description: '',
@@ -32,10 +40,16 @@ export default function CreateTrainingDialog({ open, onClose, assaAbloyProducts 
     cost_per_participant: 0
   });
 
+  const { data: verticals = [] } = useQuery({
+    queryKey: ['verticals'],
+    queryFn: () => base44.entities.Vertical.list(),
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.TrainingSession.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['training-sessions']);
+      queryClient.invalidateQueries(['trainingSessions']);
       onClose();
     },
   });
@@ -45,35 +59,88 @@ export default function CreateTrainingDialog({ open, onClose, assaAbloyProducts 
     createMutation.mutate(formData);
   };
 
+  const toggleVertical = (verticalId) => {
+    setFormData(prev => ({
+      ...prev,
+      verticals: prev.verticals.includes(verticalId)
+        ? prev.verticals.filter(id => id !== verticalId)
+        : [...prev.verticals, verticalId]
+    }));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Schedule New Training Session</DialogTitle>
+          <DialogTitle>Schedule New Training or Event</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Event Type */}
+          <div>
+            <Label>Event Type *</Label>
+            <Select 
+              value={formData.event_type} 
+              onValueChange={(val) => setFormData({...formData, event_type: val})}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="product_training">Product Training</SelectItem>
+                <SelectItem value="vertical_training">Vertical Training</SelectItem>
+                <SelectItem value="networking_event">Networking Event</SelectItem>
+                <SelectItem value="certification_exam">Certification Exam</SelectItem>
+                <SelectItem value="workshop">Workshop</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Mandatory & Bonus Flags */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="is_mandatory"
+                checked={formData.is_mandatory}
+                onCheckedChange={(checked) => setFormData({...formData, is_mandatory: checked})}
+              />
+              <div>
+                <label htmlFor="is_mandatory" className="text-sm font-medium cursor-pointer">
+                  Mandatory Training
+                </label>
+                <p className="text-xs text-slate-600 mt-1">
+                  Required for maintaining product authorization/certification
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="influences_bonus"
+                checked={formData.influences_bonus}
+                onCheckedChange={(checked) => setFormData({...formData, influences_bonus: checked})}
+              />
+              <div>
+                <label htmlFor="influences_bonus" className="text-sm font-medium cursor-pointer">
+                  Influences Bonus
+                </label>
+                <p className="text-xs text-slate-600 mt-1">
+                  Attendance affects partner bonus calculations
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {formData.is_mandatory && (
+            <Alert className="bg-amber-50 border-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-600" />
+              <AlertDescription className="text-amber-900">
+                <strong>Mandatory Training:</strong> Partners will see this as required for maintaining certification.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Label>ASSA ABLOY Product *</Label>
-              <Select 
-                value={formData.assa_abloy_product} 
-                onValueChange={(val) => setFormData({...formData, assa_abloy_product: val})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assaAbloyProducts.map(product => (
-                    <SelectItem key={product.value} value={product.value}>
-                      {product.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label>Training Title *</Label>
+              <Label>Event Title *</Label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
@@ -87,9 +154,57 @@ export default function CreateTrainingDialog({ open, onClose, assaAbloyProducts 
               <Textarea
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Training objectives and agenda..."
+                placeholder="Event objectives and agenda..."
                 rows={3}
               />
+            </div>
+
+            {/* Product Selection - Optional */}
+            {(formData.event_type === 'product_training' || formData.event_type === 'certification_exam') && (
+              <div className="col-span-2">
+                <Label>ASSA ABLOY Product {formData.event_type === 'product_training' ? '*' : '(optional)'}</Label>
+                <Select 
+                  value={formData.assa_abloy_product} 
+                  onValueChange={(val) => setFormData({...formData, assa_abloy_product: val})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assaAbloyProducts.map(product => (
+                      <SelectItem key={product.value} value={product.value}>
+                        {product.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Verticals Selection */}
+            <div className="col-span-2">
+              <Label>Target Verticals (optional)</Label>
+              <p className="text-xs text-slate-500 mb-2">
+                Select relevant industries for this {formData.event_type === 'networking_event' ? 'event' : 'training'}
+              </p>
+              <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-white max-h-48 overflow-y-auto">
+                {verticals.filter(v => v.active).map(vertical => (
+                  <label
+                    key={vertical.id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
+                      formData.verticals.includes(vertical.id)
+                        ? 'bg-blue-100 border-blue-300 text-blue-900'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={formData.verticals.includes(vertical.id)}
+                      onCheckedChange={() => toggleVertical(vertical.id)}
+                    />
+                    <span className="text-sm font-medium">{vertical.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div>
@@ -187,7 +302,7 @@ export default function CreateTrainingDialog({ open, onClose, assaAbloyProducts 
               </div>
             )}
 
-            {formData.location.type === 'onsite' && (
+            {(formData.location.type === 'onsite' || formData.location.type === 'hybrid') && (
               <div className="col-span-2">
                 <Label>Location Address</Label>
                 <Input
@@ -208,14 +323,27 @@ export default function CreateTrainingDialog({ open, onClose, assaAbloyProducts 
             </div>
 
             <div>
-              <Label>Certification Valid For (months)</Label>
+              <Label>Cost per Participant (€)</Label>
               <Input
                 type="number"
-                value={formData.certification_valid_for_months}
-                onChange={(e) => setFormData({...formData, certification_valid_for_months: parseInt(e.target.value)})}
-                min="1"
+                value={formData.cost_per_participant}
+                onChange={(e) => setFormData({...formData, cost_per_participant: parseFloat(e.target.value) || 0})}
+                min="0"
+                step="0.01"
               />
             </div>
+
+            {formData.issues_certification && (
+              <div className="col-span-2">
+                <Label>Certification Valid For (months)</Label>
+                <Input
+                  type="number"
+                  value={formData.certification_valid_for_months}
+                  onChange={(e) => setFormData({...formData, certification_valid_for_months: parseInt(e.target.value)})}
+                  min="1"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
